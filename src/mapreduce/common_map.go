@@ -1,7 +1,11 @@
 package mapreduce
 
 import (
+	"encoding/json"
+	"fmt"
 	"hash/fnv"
+	"io/ioutil"
+	"os"
 )
 
 func doMap(
@@ -11,6 +15,7 @@ func doMap(
 	nReduce int, // the number of reduce task that will be run ("R" in the paper)
 	mapF func(filename string, contents string) []KeyValue,
 ) {
+
 	//
 	// doMap manages one map task: it should read one of the input files
 	// (inFile), call the user-defined map function (mapF) for that file's
@@ -45,18 +50,45 @@ func doMap(
 	// code below. The corresponding decoding functions can be found in
 	// common_reduce.go.
 	//
-	//   enc := json.NewEncoder(file)
-	//   for _, kv := ... {
-	//     err := enc.Encode(&kv)
+	//	   enc := json.NewEncoder(file)
+	//	   for _, kv := ... {
+	//	     err := enc.Encode(&kv)
 	//
 	// Remember to close the file after you have written all the values!
 	//
 	// Your code here (Part I).
 	//
+	byteContent, err := ioutil.ReadFile(inFile)
+	if err != nil {
+		fmt.Print(err)
+	}
+
+	v1 := mapF(inFile, string(byteContent))
+
+	for _, v := range v1 {
+		var imdFileName string = reduceName(jobName, mapTask, ihash(v.Key)%nReduce)
+		imdFile, err := os.OpenFile(imdFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			fmt.Print(err)
+		}
+
+		enc := json.NewEncoder(imdFile)
+		err = enc.Encode(KeyValue{v.Key, v.Value})
+		if err != nil {
+			fmt.Println(err)
+		}
+		err = imdFile.Close()
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
 }
 
 func ihash(s string) int {
 	h := fnv.New32a()
-	h.Write([]byte(s))
+	_, err := h.Write([]byte(s))
+	if err != nil {
+		fmt.Println(err)
+	}
 	return int(h.Sum32() & 0x7fffffff)
 }
