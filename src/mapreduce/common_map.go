@@ -28,6 +28,21 @@ func doMap(
 	//	PASS
 	//	ok  	_/Users/vibhorshukla/Desktop/Distributed_Systems/Labs/git/src/mapreduce	2.342s
 
+	//	=== RUN   TestSequentialSingle
+	//	master: Starting Map/Reduce task test
+	//	Merge: read mrtmp.test-res-0
+	//	master: Map/Reduce task completed
+	//	--- PASS: TestSequentialSingle (1.17s)
+	//	=== RUN   TestSequentialMany
+	//	master: Starting Map/Reduce task test
+	//	Merge: read mrtmp.test-res-0
+	//	Merge: read mrtmp.test-res-1
+	//	Merge: read mrtmp.test-res-2
+	//	master: Map/Reduce task completed
+	//	--- PASS: TestSequentialMany (1.18s)
+	//	PASS
+	//	ok  	_/Users/vibhorshukla/Desktop/Distributed_Systems/Labs/git/src/mapreduce	2.375s
+
 	//
 	// doMap manages one map task: it should read one of the input files
 	// (inFile), call the user-defined map function (mapF) for that file's
