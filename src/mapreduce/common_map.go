@@ -56,28 +56,52 @@ func doMap(
 	//
 	// Remember to close the file after you have written all the values!
 	//
-	// Your code here (Part I).
-	//
+
+	// Reading the input content as bytes
 	byteContent, err := ioutil.ReadFile(inFile)
 	if err != nil {
 		fmt.Print(err)
 	}
 
-	v1 := mapF(inFile, string(byteContent))
+	// Creating mapped content to be written to the intermediate files
+	mappedContent := mapF(inFile, string(byteContent))
 
-	for _, v := range v1 {
-		var imdFileName string = reduceName(jobName, mapTask, ihash(v.Key)%nReduce)
-		imdFile, err := os.OpenFile(imdFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			fmt.Print(err)
+	// Creating/opening intermediate files
+	var intermediateFilesMap = make(map[string]*os.File)
+	for _, value := range mappedContent {
+		intermediateFileName := reduceName(jobName, mapTask, ihash(value.Key)%nReduce)
+		if _, fileExists := intermediateFilesMap[intermediateFileName]; !fileExists {
+			fmt.Printf("File name: [%s]\n", intermediateFileName)
+			intermediateFile, err := os.OpenFile(intermediateFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			if err != nil {
+				fmt.Print(err)
+			}
+
+			intermediateFilesMap[intermediateFileName] = intermediateFile
 		}
+	}
 
-		enc := json.NewEncoder(imdFile)
-		err = enc.Encode(KeyValue{v.Key, v.Value})
+	// Writing the mapped content into the intermediate files
+	for _, value := range mappedContent {
+		intermediateFileName := reduceName(jobName, mapTask, ihash(value.Key)%nReduce)
+		intermediateFile := intermediateFilesMap[intermediateFileName]
+
+		// Encoding the mapped result in JSON format
+		enc := json.NewEncoder(intermediateFile)
+		err = enc.Encode(KeyValue{value.Key, value.Value})
 		if err != nil {
 			fmt.Println(err)
 		}
-		err = imdFile.Close()
+
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+
+	// Closing all the files
+	for _, value := range mappedContent {
+		intermediateFileName := reduceName(jobName, mapTask, ihash(value.Key)%nReduce)
+		err := intermediateFilesMap[intermediateFileName].Close()
 		if err != nil {
 			fmt.Println(err)
 		}

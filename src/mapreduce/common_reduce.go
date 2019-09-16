@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
+	"strconv"
 )
 
 func doReduce(
@@ -14,52 +16,6 @@ func doReduce(
 	nMap int, // the number of map tasks that were run ("M" in the paper)
 	reduceF func(key string, values []string) string,
 ) {
-	combineMap := make(map[string][]string)
-	for i := 0; i < nMap; i++ {
-		imdFile, err := os.Open(reduceName(jobName, i, reduceTask))
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		decoder := json.NewDecoder(imdFile)
-		for {
-			var entry KeyValue
-			if err := decoder.Decode(&entry); err == io.EOF {
-				break
-			} else if err != nil {
-				fmt.Println(err)
-			}
-
-			combineMap[entry.Key] = append(combineMap[entry.Key], entry.Value)
-			//fmt.Printf("%s: %s\n", item.Key, item.Value)
-		}
-
-		// TODO:  Sorting the items in ascending order of keys
-
-		for key, value := range combineMap {
-			//fmt.Printf("%s: %s\n", items[i].Key, items[i].Value)
-			var entry KeyValue
-			entry.Key = key
-			entry.Value = reduceF(key, value)
-
-			// Writing reduced entry to the output file
-			outputFile, err := os.OpenFile(outFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-			if err != nil {
-				fmt.Println(err)
-			}
-
-			enc := json.NewEncoder(outputFile)
-			err = enc.Encode(entry)
-			if err != nil {
-				fmt.Println(err)
-			}
-			err = outputFile.Close()
-			if err != nil {
-				fmt.Println(err)
-			}
-		}
-	}
-
 	//
 	// doReduce manages one reduce task: it should read the intermediate
 	// files for the task, sort the intermediate key/value pairs by key,
@@ -97,4 +53,90 @@ func doReduce(
 	//
 	// Your code here (Part I).
 	//
+
+	// Contains the reduced content for each key and value pair
+	combineMap := make(map[string][]string)
+	// Contains only the keys of the combineMap to be sorted
+	var combineMapkeys []int
+
+	// Opening intermediate files
+	var intermediateFileMap = make(map[string]*os.File)
+	for i := 0; i < nMap; i++ {
+		intermediateFileName := reduceName(jobName, i, reduceTask)
+		if _, fileExists := intermediateFileMap[intermediateFileName]; !fileExists {
+			intermediateFile, err := os.Open(intermediateFileName)
+			if err != nil {
+				fmt.Print(err)
+			}
+			intermediateFileMap[intermediateFileName] = intermediateFile
+		}
+	}
+
+	// Creating output file
+	outputFile, err := os.OpenFile(outFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// Reducing the intermediate files to a single output file
+	for i := 0; i < nMap; i++ {
+		intermediateFileName := reduceName(jobName, i, reduceTask)
+		intermediateFile := intermediateFileMap[intermediateFileName]
+
+		// Decoding the JSON content of the intermediate files
+		decoder := json.NewDecoder(intermediateFile)
+		for {
+			var entry KeyValue
+			if err := decoder.Decode(&entry); err == io.EOF {
+				break
+			} else if err != nil {
+				fmt.Println(err)
+			}
+			combineMap[entry.Key] = append(combineMap[entry.Key], entry.Value)
+		}
+	}
+
+	// Creating a list of keys converted from string to int
+	for key := range combineMap {
+		intKey, err := strconv.Atoi(key)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		combineMapkeys = append(combineMapkeys, intKey)
+	}
+
+	// Sorting the keys  in ascending order
+	sort.Ints(combineMapkeys)
+
+	// Writing the reduced result in the outFile
+	for _, key := range combineMapkeys {
+		var entry KeyValue
+		stringKey := strconv.Itoa(key)
+
+		entry.Key = stringKey
+		entry.Value = reduceF(stringKey, combineMap[stringKey])
+
+		// Encoding the reduced result in JSON format in output file
+		enc := json.NewEncoder(outputFile)
+		err = enc.Encode(entry)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+
+	// Closing intermediate files
+	for i := 0; i < nMap; i++ {
+		intermediateFileName := reduceName(jobName, i, reduceTask)
+		err := intermediateFileMap[intermediateFileName].Close()
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+
+	// Closing the output files
+	err = outputFile.Close()
+	if err != nil {
+		fmt.Println(err)
+	}
 }
