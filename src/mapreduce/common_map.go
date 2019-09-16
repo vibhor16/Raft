@@ -16,6 +16,18 @@ func doMap(
 	mapF func(filename string, contents string) []KeyValue,
 ) {
 
+	//	Output:
+	//	master: Starting Map/Reduce task test
+	//	Merge: read mrtmp.test-res-0
+	//	master: Map/Reduce task completed
+	//	master: Starting Map/Reduce task test
+	//	Merge: read mrtmp.test-res-0
+	//	Merge: read mrtmp.test-res-1
+	//	Merge: read mrtmp.test-res-2
+	//	master: Map/Reduce task completed
+	//	PASS
+	//	ok  	_/Users/vibhorshukla/Desktop/Distributed_Systems/Labs/git/src/mapreduce	2.342s
+
 	//
 	// doMap manages one map task: it should read one of the input files
 	// (inFile), call the user-defined map function (mapF) for that file's
@@ -71,7 +83,6 @@ func doMap(
 	for _, value := range mappedContent {
 		intermediateFileName := reduceName(jobName, mapTask, ihash(value.Key)%nReduce)
 		if _, fileExists := intermediateFilesMap[intermediateFileName]; !fileExists {
-			fmt.Printf("File name: [%s]\n", intermediateFileName)
 			intermediateFile, err := os.OpenFile(intermediateFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
 				fmt.Print(err)
@@ -99,8 +110,7 @@ func doMap(
 	}
 
 	// Closing all the files
-	for _, value := range mappedContent {
-		intermediateFileName := reduceName(jobName, mapTask, ihash(value.Key)%nReduce)
+	for intermediateFileName := range intermediateFilesMap {
 		err := intermediateFilesMap[intermediateFileName].Close()
 		if err != nil {
 			fmt.Println(err)

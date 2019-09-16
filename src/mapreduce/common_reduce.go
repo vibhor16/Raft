@@ -126,8 +126,7 @@ func doReduce(
 	}
 
 	// Closing intermediate files
-	for i := 0; i < nMap; i++ {
-		intermediateFileName := reduceName(jobName, i, reduceTask)
+	for intermediateFileName := range intermediateFileMap {
 		err := intermediateFileMap[intermediateFileName].Close()
 		if err != nil {
 			fmt.Println(err)
