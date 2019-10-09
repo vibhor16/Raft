@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"mapreduce"
 	"os"
+	"strconv"
+	"strings"
+	"unicode"
 )
 
 //
@@ -15,6 +18,29 @@ import (
 //
 func mapF(filename string, contents string) []mapreduce.KeyValue {
 	// Your code here (Part II).
+
+	// mappedContent contains the key-value pair for the words in this content
+	var mappedContent []mapreduce.KeyValue
+
+	// thisValue is one entry in the mappedContent
+	var thisValue mapreduce.KeyValue
+
+	// This function returns true if the character is not a letter
+	notLetterFunction := func(c rune) bool {
+		return !unicode.IsLetter(c)
+	}
+
+	// The words from contents split on the basis of notLetterFunction
+	words := strings.FieldsFunc(contents, notLetterFunction)
+
+	// Populates mappedContent for every word as key and value as "1"
+	for _, word := range words {
+		thisValue.Key = word
+		thisValue.Value = "1"
+		mappedContent = append(mappedContent, thisValue)
+	}
+
+	return mappedContent
 }
 
 //
@@ -24,6 +50,21 @@ func mapF(filename string, contents string) []mapreduce.KeyValue {
 //
 func reduceF(key string, values []string) string {
 	// Your code here (Part II).
+
+	// Sum of counts for this given word
+	totalNumberOfOccurences := 0
+
+	// Calculate the total number of occurrences for this word
+	for _, value := range values {
+		count, err := strconv.Atoi(value)
+		if err != nil {
+			fmt.Println(err)
+		}
+		totalNumberOfOccurences = totalNumberOfOccurences + count
+	}
+
+	// Return the string equivalent for this integer sum
+	return strconv.Itoa(totalNumberOfOccurences)
 }
 
 // Can be run in 3 ways:

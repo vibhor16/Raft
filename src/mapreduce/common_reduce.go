@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"sort"
-	"strconv"
 )
 
 func doReduce(
@@ -57,7 +56,7 @@ func doReduce(
 	// Contains the reduced content for each key and value pair
 	combineMap := make(map[string][]string)
 	// Contains only the keys of the combineMap to be sorted
-	var combineMapkeys []int
+	var combineMapkeys []string
 
 	// Opening intermediate files
 	var intermediateFileMap = make(map[string]*os.File)
@@ -96,26 +95,20 @@ func doReduce(
 		}
 	}
 
-	// Creating a list of keys converted from string to int
+	// Creating a list of keys
 	for key := range combineMap {
-		intKey, err := strconv.Atoi(key)
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		combineMapkeys = append(combineMapkeys, intKey)
+		combineMapkeys = append(combineMapkeys, key)
 	}
 
 	// Sorting the keys  in ascending order
-	sort.Ints(combineMapkeys)
+	sort.Strings(combineMapkeys)
 
 	// Writing the reduced result in the outFile
 	for _, key := range combineMapkeys {
 		var entry KeyValue
-		stringKey := strconv.Itoa(key)
 
-		entry.Key = stringKey
-		entry.Value = reduceF(stringKey, combineMap[stringKey])
+		entry.Key = key
+		entry.Value = reduceF(key, combineMap[key])
 
 		// Encoding the reduced result in JSON format in output file
 		enc := json.NewEncoder(outputFile)
