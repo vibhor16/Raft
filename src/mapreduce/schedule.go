@@ -28,67 +28,38 @@ func schedule(jobName string, mapFiles []string, nReduce int, phase jobPhase, re
 		n_other = nReduce
 		fmt.Printf("Map Schedule: %v %v tasks (%d I/Os)\n", ntasks, phase, n_other)
 
-		// Creating a buffered channel for tasks, size is equal than number of tasks to keep it non-blocking
-		var task = make(chan int, ntasks)
-
-		// Assigning tasks
-		for taskNumber := 0; taskNumber < ntasks; taskNumber++ {
-			task <- taskNumber
-		}
-
-		// Closing the task channel
-		close(task)
-
-		// Retrieving workers from registerChan channel
-		for channel := range registerChan {
-
-			// When all the map tasks are done, the registerChan gets "End" value signifying to stop polling for more workers
-			if channel == "End" {
-				break
-			}
-
-			// Creating a local channel variable so that a unique channel is given to a goroutine
-			channel := channel
-
-			// Incrementing wait value context of which is that this goroutine needs to complete before this channel is reassigned to other routine
-			wait.Add(1)
-			// Goroutine to perform a map operation
-			go PerformOperation(&wait, registerChan, channel, jobName, mapFiles, phase, task, n_other, ntasks)
-		}
-		// Waiting for all routines to finish before map task ends
-		wait.Wait()
-
 	case reducePhase:
 		ntasks = nReduce
 		n_other = len(mapFiles)
 		fmt.Printf("Reduce Schedule: %v %v tasks (%d I/Os)\n", ntasks, phase, n_other)
 
-		// Creating a buffered channel for tasks, size is equal than number of tasks to keep it non-blocking
-		var task = make(chan int, ntasks)
-
-		// Assigning tasks
-		for taskNumber := 0; taskNumber < ntasks; taskNumber++ {
-			task <- taskNumber
-		}
-		// Closing the task channel
-		close(task)
-
-		// Retrieving workers from registerChan channel
-		for channel := range registerChan {
-			// When all the reduce tasks are done, the registerChan gets "End" value signifying to stop polling for more workers
-			if channel == "End" {
-				break
-			}
-			// Creating a local channel variable so that a unique channel is given to a goroutine
-			channel := channel
-			// Incrementing wait value context of which is that this goroutine needs to complete before this channel is reassigned to other routine
-			wait.Add(1)
-			// Goroutine to perform a reduce operation
-			go PerformOperation(&wait, registerChan, channel, jobName, mapFiles, phase, task, n_other, ntasks)
-		}
-		// Waiting for all routines to finish before reduce task ends
-		wait.Wait()
 	}
+
+	// Creating a buffered channel for tasks, size is equal than number of tasks to keep it non-blocking
+	var task = make(chan int, ntasks)
+
+	// Assigning tasks
+	for taskNumber := 0; taskNumber < ntasks; taskNumber++ {
+		task <- taskNumber
+	}
+	// Closing the task channel
+	close(task)
+
+	// Retrieving workers from registerChan channel
+	for channel := range registerChan {
+		// When all the tasks are done, the registerChan gets "End" value signifying to stop polling for more workers
+		if channel == "End" {
+			break
+		}
+		// Creating a local channel variable so that a unique channel is given to a goroutine
+		channel := channel
+		// Incrementing wait value context of which is that this goroutine needs to complete before this channel is reassigned to other routine
+		wait.Add(1)
+		// Goroutine to perform a reduce operation
+		go PerformOperation(&wait, registerChan, channel, jobName, mapFiles, phase, task, n_other, ntasks)
+	}
+	// Waiting for all routines to finish before task ends
+	wait.Wait()
 
 	// All ntasks tasks have to be scheduled on workers. Once all tasks
 	// have completed successfully, schedule() should return.
