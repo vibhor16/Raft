@@ -42,35 +42,28 @@ func schedule(jobName string, mapFiles []string, nReduce int, phase jobPhase, re
 	for taskNumber := 0; taskNumber < ntasks; taskNumber++ {
 		task <- taskNumber
 	}
-	// Closing the task channel
-	close(task)
 
 	// Retrieving workers from registerChan channel
-	for channel := range registerChan {
+	for worker := range registerChan {
 		// When all the tasks are done, the registerChan gets "End" value signifying to stop polling for more workers
-		if channel == "End" {
+		if worker == "End" {
 			break
 		}
 		// Creating a local channel variable so that a unique channel is given to a goroutine
-		channel := channel
+		worker := worker
 		// Incrementing wait value context of which is that this goroutine needs to complete before this channel is reassigned to other routine
 		wait.Add(1)
 		// Goroutine to perform a reduce operation
-		go PerformOperation(&wait, registerChan, channel, jobName, mapFiles, phase, task, n_other, ntasks)
+		go PerformOperation(&wait, registerChan, worker, jobName, mapFiles, phase, task, n_other, ntasks)
 	}
 	// Waiting for all routines to finish before task ends
 	wait.Wait()
 
-	// All ntasks tasks have to be scheduled on workers. Once all tasks
-	// have completed successfully, schedule() should return.
-	//
-	// Your code here (Part III, Part IV).
-	//
 	fmt.Printf("Schedule: %v done\n", phase)
 }
 
 // A function common to both map and reduce phase, differing in fileName and phase name
-func PerformOperation(wait *sync.WaitGroup, registerChan chan<- string, worker string, jobName string, mapFiles []string, phase jobPhase, task <-chan int, nOther int, ntasks int) {
+func PerformOperation(wait *sync.WaitGroup, registerChan chan<- string, worker string, jobName string, mapFiles []string, phase jobPhase, task chan int, nOther int, ntasks int) {
 	// Perform tasks contained in the task channel
 	for taskNumber := range task {
 
@@ -86,36 +79,25 @@ func PerformOperation(wait *sync.WaitGroup, registerChan chan<- string, worker s
 		}
 
 		// RPC Call made to the worker to performa map or reduce task
-		call(worker, "Worker.DoTask", DoTaskArgs{jobName, fileName, phase, taskNumber, nOther}, nil)
+		isSuccessful := call(worker, "Worker.DoTask", DoTaskArgs{jobName, fileName, phase, taskNumber, nOther}, nil)
+
+		// If RPC call failed due to  WORKER failure, add this failed task again to the task channel so that it gets picked up by other workers
+		if !isSuccessful {
+			fmt.Println("Fail : task = ", taskNumber, " worker = ", worker)
+			wait.Done()
+			task <- taskNumber
+
+			// End this worker since it no longer serves the purpose
+			// If this worker revives, then the registerChan channel will pick it up in the main thread
+			return
+		}
 
 		// If last task is done, then signal to stop polling for more workers using the registerChan channel
 		if taskNumber == ntasks-1 {
 			registerChan <- "End"
+			close(task)
 		}
 	}
 	// Wait is decremented signifying that the task of this routine is done
 	wait.Done()
-}
-
-// A test function which can be used to add a new worker while map or reduce task is in progress
-func TestNewWorkerInChannel(task chan<- int, registerChan chan<- string) {
-
-	// A test worker
-	newWorker := "/var/tmp/824-501/mr929-worker0"
-
-	// Add new worker after 5 seconds when all map and reduce tasks are done
-	time.Sleep(5 * time.Second)
-	fmt.Println("Adding new tasks")
-
-	// Add new tasks in the task channel
-	for taskNumber := 0; taskNumber <= 5; taskNumber++ {
-		//fmt.Println("Main: taskNumber - ", taskNumber)
-		task <- taskNumber
-	}
-
-	close(task)
-	fmt.Println("Adding a new worker")
-	// Add a new worker to registerChan channel
-	registerChan <- newWorker
-
 }
