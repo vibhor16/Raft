@@ -1,0 +1,572 @@
+[ Follower   0  at  -1 ]   Changed to FOLLOWER - 0 :( , Reason: Initialize
+[ Follower   0  at  -1 ]   BEGIN election timer
+[ Follower   0  at  -1 ]   New Election Timeout = 433
+[ Follower   1  at  -1 ]   Changed to FOLLOWER - 1 :( , Reason: Initialize
+[ Follower   1  at  -1 ]   BEGIN election timer
+[ Follower   1  at  -1 ]   New Election Timeout = 427
+[ Follower   2  at  -1 ]   Changed to FOLLOWER - 2 :( , Reason: Initialize
+[ Follower   2  at  -1 ]   BEGIN election timer
+Test (2A): initial election ...
+[ Follower   2  at  -1 ]   New Election Timeout = 404
+[ Follower   2  at  -1 ]   REACHED Election Timeout at 404 ms
+[ Follower   2  at  -1 ]   New Election Timeout = 413
+
+[ Follower   2  at  -1 ]   START New Election
+[ Follower   2  at  -1 ]   Changed to CANDIDATE - 2 :)
+[ Candidate   2  at  0 ]   ASKING vote from 0
+[ Candidate   2  at  0 ]   ASKING vote from 1
+[ Follower   1  at  0 ]   Changed to FOLLOWER - 1 :( , Reason:  RequestVote RPC handler - Candidate has a newer term than me!
+[ Follower   1  at  0 ]  {Vote Handler, C: 2} PASS Candidate Term at 2
+[ Follower   0  at  0 ]   Changed to FOLLOWER - 0 :( , Reason:  RequestVote RPC handler - Candidate has a newer term than me!
+[ Follower   0  at  0 ]  {Vote Handler, C: 2} PASS Candidate Term at 2
+[ Follower   1  at  0 ]  {Vote Handler, C: 2} SIGNAL RESET election timer As VOTE GRANTED 
+[ Follower   0  at  0 ]  {Vote Handler, C: 2} SIGNAL RESET election timer As VOTE GRANTED 
+
+[ Follower   0  at  0 ]   RESETTED Election Timer to 417 ms at 1 ms
+
+[ Follower   1  at  0 ]   RESETTED Election Timer to 412 ms at 1 ms
+[ Candidate   2  at  0 ]   RECEIVED vote from 1 Term = 0 Result = true
+[ Candidate   2  at  0 ]   RECEIVED vote from 0 Term = 0 Result = true
+
+[ Candidate   2  at  0 ]   Vote Count Majority ACHIEVED :) in correct Term, Votes Got = 2, Majority = 2
+
+[ Leader   2  at  0 ]   -- YAYY I am the new LEADER 2 :)
+
+[ Leader   2  at  0 ]   SIGNAL STOP election timer 2
+
+[ Leader   2  at  0 ]   STARTING Periodic Heartbeats 
+
+[ Leader   2  at  0 ]   Already a LEADER!
+[ Leader   2  at  0 ]   STOPPED Election Timer at 5 ms, exiting..
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+[ Follower   1  at  0 ]  {AppEntry Handler, L: 2} PASS Leader Term at 0
+[ Follower   1  at  0 ]  {AppEntry Handler, L: 2} SIGNAL RESET election timeout
+[ Follower   0  at  0 ]  {AppEntry Handler, L: 2} PASS Leader Term at 0
+[ Follower   0  at  0 ]  {AppEntry Handler, L: 2} SIGNAL RESET election timeout
+
+[ Follower   1  at  0 ]   RESETTED Election Timer to 435 ms at 1 ms
+
+[ Follower   0  at  0 ]   RESETTED Election Timer to 449 ms at 1 ms
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+[ Follower   0  at  0 ]  {AppEntry Handler, L: 2} PASS Leader Term at 0
+[ Follower   0  at  0 ]  {AppEntry Handler, L: 2} SIGNAL RESET election timeout
+[ Follower   1  at  0 ]  {AppEntry Handler, L: 2} PASS Leader Term at 0
+[ Follower   1  at  0 ]  {AppEntry Handler, L: 2} SIGNAL RESET election timeout
+
+[ Follower   0  at  0 ]   RESETTED Election Timer to 423 ms at 1 ms
+
+[ Follower   1  at  0 ]   RESETTED Election Timer to 410 ms at 1 ms
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+[ Follower   0  at  0 ]  {AppEntry Handler, L: 2} PASS Leader Term at 0
+[ Follower   0  at  0 ]  {AppEntry Handler, L: 2} SIGNAL RESET election timeout
+[ Follower   1  at  0 ]  {AppEntry Handler, L: 2} PASS Leader Term at 0
+[ Follower   1  at  0 ]  {AppEntry Handler, L: 2} SIGNAL RESET election timeout
+
+[ Follower   0  at  0 ]   RESETTED Election Timer to 411 ms at 1 ms
+
+[ Follower   1  at  0 ]   RESETTED Election Timer to 424 ms at 1 ms
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+[ Follower   0  at  0 ]  {AppEntry Handler, L: 2} PASS Leader Term at 0
+[ Follower   0  at  0 ]  {AppEntry Handler, L: 2} SIGNAL RESET election timeout
+[ Follower   1  at  0 ]  {AppEntry Handler, L: 2} PASS Leader Term at 0
+[ Follower   1  at  0 ]  {AppEntry Handler, L: 2} SIGNAL RESET election timeout
+
+[ Follower   0  at  0 ]   RESETTED Election Timer to 409 ms at 1 ms
+
+[ Follower   1  at  0 ]   RESETTED Election Timer to 441 ms at 1 ms
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+[ Follower   0  at  0 ]  {AppEntry Handler, L: 2} PASS Leader Term at 0
+[ Follower   0  at  0 ]  {AppEntry Handler, L: 2} SIGNAL RESET election timeout
+[ Follower   1  at  0 ]  {AppEntry Handler, L: 2} PASS Leader Term at 0
+[ Follower   1  at  0 ]  {AppEntry Handler, L: 2} SIGNAL RESET election timeout
+
+[ Follower   1  at  0 ]   RESETTED Election Timer to 417 ms at 1 ms
+
+[ Follower   0  at  0 ]   RESETTED Election Timer to 419 ms at 1 ms
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+[ Follower   1  at  0 ]  {AppEntry Handler, L: 2} PASS Leader Term at 0
+[ Follower   1  at  0 ]  {AppEntry Handler, L: 2} SIGNAL RESET election timeout
+[ Follower   0  at  0 ]  {AppEntry Handler, L: 2} PASS Leader Term at 0
+[ Follower   0  at  0 ]  {AppEntry Handler, L: 2} SIGNAL RESET election timeout
+
+[ Follower   0  at  0 ]   RESETTED Election Timer to 412 ms at 1 ms
+
+[ Follower   1  at  0 ]   RESETTED Election Timer to 423 ms at 1 ms
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+[ Follower   0  at  0 ]  {AppEntry Handler, L: 2} PASS Leader Term at 0
+[ Follower   0  at  0 ]  {AppEntry Handler, L: 2} SIGNAL RESET election timeout
+[ Follower   1  at  0 ]  {AppEntry Handler, L: 2} PASS Leader Term at 0
+[ Follower   1  at  0 ]  {AppEntry Handler, L: 2} SIGNAL RESET election timeout
+
+[ Follower   0  at  0 ]   RESETTED Election Timer to 409 ms at 1 ms
+
+[ Follower   1  at  0 ]   RESETTED Election Timer to 406 ms at 1 ms
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+[ Follower   1  at  0 ]  {AppEntry Handler, L: 2} PASS Leader Term at 0
+[ Follower   1  at  0 ]  {AppEntry Handler, L: 2} SIGNAL RESET election timeout
+[ Follower   0  at  0 ]  {AppEntry Handler, L: 2} PASS Leader Term at 0
+[ Follower   0  at  0 ]  {AppEntry Handler, L: 2} SIGNAL RESET election timeout
+
+[ Follower   1  at  0 ]   RESETTED Election Timer to 418 ms at 1 ms
+
+[ Follower   0  at  0 ]   RESETTED Election Timer to 412 ms at 1 ms
+  ... Passed --   3.0  3   18    0
+[ Follower   0  at  -1 ]   Changed to FOLLOWER - 0 :( , Reason: Initialize
+[ Follower   0  at  -1 ]   BEGIN election timer
+[ Follower   0  at  -1 ]   New Election Timeout = 436
+[ Follower   1  at  -1 ]   Changed to FOLLOWER - 1 :( , Reason: Initialize
+[ Follower   1  at  -1 ]   BEGIN election timer
+[ Follower   1  at  -1 ]   New Election Timeout = 404
+[ Follower   2  at  -1 ]   Changed to FOLLOWER - 2 :( , Reason: Initialize
+[ Follower   2  at  -1 ]   BEGIN election timer
+[ Follower   2  at  -1 ]   New Election Timeout = 411
+Test (2A): election after network failure ...
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+[ Follower   0  at  0 ]   REACHED Election Timeout at 412 ms
+[ Follower   0  at  0 ]   New Election Timeout = 403
+
+[ Follower   0  at  0 ]   START New Election
+[ Follower   0  at  0 ]   Changed to CANDIDATE - 0 :)
+[ Candidate   0  at  1 ]   ASKING vote from 1
+[ Candidate   0  at  1 ]   ASKING vote from 2
+[ Candidate   0  at  1 ]   RECEIVED vote from 1 Term = 0 Result = false
+[ Candidate   0  at  1 ]   RECEIVED vote from 2 Term = 0 Result = false
+[ Follower   1  at  0 ]   REACHED Election Timeout at 418 ms
+[ Follower   1  at  0 ]   New Election Timeout = 429
+
+[ Follower   1  at  0 ]   START New Election
+[ Follower   1  at  0 ]   Changed to CANDIDATE - 1 :)
+[ Candidate   1  at  1 ]   ASKING vote from 0
+[ Candidate   1  at  1 ]   ASKING vote from 2
+[ Candidate   1  at  1 ]   RECEIVED vote from 0 Term = 0 Result = false
+[ Candidate   1  at  1 ]   RECEIVED vote from 2 Term = 0 Result = false
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+[ Follower   1  at  -1 ]   REACHED Election Timeout at 404 ms
+[ Follower   1  at  -1 ]   New Election Timeout = 412
+
+[ Follower   1  at  -1 ]   START New Election
+[ Follower   1  at  -1 ]   Changed to CANDIDATE - 1 :)
+[ Candidate   1  at  0 ]   ASKING vote from 0
+[ Candidate   1  at  0 ]   ASKING vote from 2
+[ Follower   0  at  0 ]   Changed to FOLLOWER - 0 :( , Reason:  RequestVote RPC handler - Candidate has a newer term than me!
+[ Follower   0  at  0 ]  {Vote Handler, C: 1} PASS Candidate Term at 1
+[ Follower   0  at  0 ]  {Vote Handler, C: 1} SIGNAL RESET election timer As VOTE GRANTED 
+[ Follower   2  at  0 ]   Changed to FOLLOWER - 2 :( , Reason:  RequestVote RPC handler - Candidate has a newer term than me!
+[ Follower   2  at  0 ]  {Vote Handler, C: 1} PASS Candidate Term at 1
+
+[ Follower   0  at  0 ]   RESETTED Election Timer to 444 ms at 1 ms
+[ Follower   2  at  0 ]  {Vote Handler, C: 1} SIGNAL RESET election timer As VOTE GRANTED 
+
+[ Follower   2  at  0 ]   RESETTED Election Timer to 408 ms at 1 ms
+[ Candidate   1  at  0 ]   RECEIVED vote from 0 Term = 0 Result = true
+
+[ Candidate   1  at  0 ]   Vote Count Majority ACHIEVED :) in correct Term, Votes Got = 2, Majority = 2
+
+[ Leader   1  at  0 ]   -- YAYY I am the new LEADER 1 :)
+
+[ Leader   1  at  0 ]   SIGNAL STOP election timer 1
+[ Leader   1  at  0 ]   RECEIVED vote from 2 Term = 0 Result = true
+
+[ Leader   1  at  0 ]   Already a LEADER!
+
+[ Leader   1  at  0 ]   STARTING Periodic Heartbeats 
+[ Leader   1  at  0 ]   STOPPED Election Timer at 4 ms, exiting..
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+[ Leader   1  at  0 ]   SENDING Heartbeat to 0
+[ Leader   1  at  0 ]   SENDING Heartbeat to 2
+[ Follower   0  at  0 ]  {AppEntry Handler, L: 1} PASS Leader Term at 0
+[ Follower   2  at  0 ]  {AppEntry Handler, L: 1} PASS Leader Term at 0
+[ Follower   2  at  0 ]  {AppEntry Handler, L: 1} SIGNAL RESET election timeout
+[ Follower   0  at  0 ]  {AppEntry Handler, L: 1} SIGNAL RESET election timeout
+
+[ Follower   0  at  0 ]   RESETTED Election Timer to 449 ms at 1 ms
+
+[ Follower   2  at  0 ]   RESETTED Election Timer to 401 ms at 1 ms
+[ Candidate   0  at  1 ]   REACHED Election Timeout at 403 ms
+[ Candidate   0  at  1 ]   New Election Timeout = 420
+
+[ Candidate   0  at  1 ]   START New Election
+[ Candidate   0  at  1 ]   Changed to CANDIDATE - 0 :)
+[ Candidate   0  at  2 ]   ASKING vote from 1
+[ Candidate   0  at  2 ]   ASKING vote from 2
+[ Candidate   0  at  2 ]   RECEIVED vote from 1 Term = 0 Result = false
+[ Candidate   0  at  2 ]   RECEIVED vote from 2 Term = 0 Result = false
+[ Candidate   1  at  1 ]   REACHED Election Timeout at 429 ms
+[ Candidate   1  at  1 ]   New Election Timeout = 403
+
+[ Candidate   1  at  1 ]   START New Election
+[ Candidate   1  at  1 ]   Changed to CANDIDATE - 1 :)
+[ Candidate   1  at  2 ]   ASKING vote from 0
+[ Candidate   1  at  2 ]   ASKING vote from 2
+[ Candidate   1  at  2 ]   RECEIVED vote from 0 Term = 0 Result = false
+[ Candidate   1  at  2 ]   RECEIVED vote from 2 Term = 0 Result = false
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+
+ => Failing leader -  1
+[ Leader   1  at  0 ]   SENDING Heartbeat to 0
+[ Leader   1  at  0 ]   SENDING Heartbeat to 2
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+[ Follower   2  at  0 ]   REACHED Election Timeout at 401 ms
+[ Follower   2  at  0 ]   New Election Timeout = 415
+
+[ Follower   2  at  0 ]   START New Election
+[ Follower   2  at  0 ]   Changed to CANDIDATE - 2 :)
+[ Candidate   2  at  1 ]   ASKING vote from 0
+[ Candidate   2  at  1 ]   ASKING vote from 1
+[ Follower   0  at  1 ]   Changed to FOLLOWER - 0 :( , Reason:  RequestVote RPC handler - Candidate has a newer term than me!
+[ Follower   0  at  1 ]  {Vote Handler, C: 2} PASS Candidate Term at 2
+[ Follower   0  at  1 ]  {Vote Handler, C: 2} SIGNAL RESET election timer As VOTE GRANTED 
+
+[ Follower   0  at  1 ]   RESETTED Election Timer to 405 ms at 1 ms
+[ Candidate   2  at  1 ]   RECEIVED vote from 0 Term = 1 Result = true
+
+[ Candidate   2  at  1 ]   Vote Count Majority ACHIEVED :) in correct Term, Votes Got = 2, Majority = 2
+
+[ Leader   2  at  1 ]   -- YAYY I am the new LEADER 2 :)
+
+[ Leader   2  at  1 ]   SIGNAL STOP election timer 2
+
+[ Leader   2  at  1 ]   STARTING Periodic Heartbeats 
+[ Leader   2  at  1 ]   STOPPED Election Timer at 4 ms, exiting..
+[ Leader   1  at  0 ]   SENDING Heartbeat to 0
+[ Leader   1  at  0 ]   SENDING Heartbeat to 2
+[ Candidate   0  at  2 ]   REACHED Election Timeout at 420 ms
+[ Candidate   0  at  2 ]   New Election Timeout = 445
+
+[ Candidate   0  at  2 ]   START New Election
+[ Candidate   0  at  2 ]   Changed to CANDIDATE - 0 :)
+[ Candidate   0  at  3 ]   ASKING vote from 1
+[ Candidate   0  at  3 ]   ASKING vote from 2
+[ Candidate   0  at  3 ]   RECEIVED vote from 1 Term = 0 Result = false
+[ Candidate   0  at  3 ]   RECEIVED vote from 2 Term = 0 Result = false
+[ Candidate   1  at  2 ]   REACHED Election Timeout at 403 ms
+[ Candidate   1  at  2 ]   New Election Timeout = 429
+
+[ Candidate   1  at  2 ]   START New Election
+[ Candidate   1  at  2 ]   Changed to CANDIDATE - 1 :)
+[ Candidate   1  at  3 ]   ASKING vote from 0
+[ Candidate   1  at  3 ]   ASKING vote from 2
+[ Candidate   1  at  3 ]   RECEIVED vote from 0 Term = 0 Result = false
+[ Candidate   1  at  3 ]   RECEIVED vote from 2 Term = 0 Result = false
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+
+ => Reconnecting leader -  1
+[ Leader   2  at  1 ]   SENDING Heartbeat to 0
+[ Leader   2  at  1 ]   SENDING Heartbeat to 1
+[ Follower   0  at  1 ]  {AppEntry Handler, L: 2} PASS Leader Term at 1
+[ Follower   0  at  1 ]  {AppEntry Handler, L: 2} SIGNAL RESET election timeout
+[ Leader   1  at  0 ]  {AppEntry Handler, L: 2} PASS Leader Term at 1
+[ Leader   1  at  0 ]  {AppEntry Handler, L: 2} SIGNAL RESET election timeout
+
+[ Follower   0  at  1 ]   RESETTED Election Timer to 444 ms at 1 ms
+[ Leader   1  at  0 ]   SENDING Heartbeat to 0
+[ Leader   1  at  0 ]   SENDING Heartbeat to 2
+[ Follower   0  at  1 ]  {AppEntry Handler, L: 1} FAIL Term Mismatch Leader Term at 0
+[ Leader   2  at  1 ]  {AppEntry Handler, L: 1} FAIL Term Mismatch Leader Term at 0
+[ Leader   1  at  1 ]   STOPPED Heartbeat
+[ Leader   1  at  1 ]   SIGNAL STEP DOWN from LEADER to FOLLOWER..
+[ Follower   1  at  1 ]   Changed to FOLLOWER - 1 :( , Reason: STEP DOWN from LEADER to FOLLOWER
+[ Follower   1  at  1 ]   BEGIN election timer
+[ Follower   1  at  1 ]   New Election Timeout = 423
+
+[ Follower   1  at  1 ]   RESETTED Election Timer to 445 ms at 1 ms
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+[ Leader   2  at  1 ]   SENDING Heartbeat to 0
+[ Leader   2  at  1 ]   SENDING Heartbeat to 1
+[ Follower   0  at  1 ]  {AppEntry Handler, L: 2} PASS Leader Term at 1
+[ Follower   1  at  1 ]  {AppEntry Handler, L: 2} PASS Leader Term at 1
+[ Follower   0  at  1 ]  {AppEntry Handler, L: 2} SIGNAL RESET election timeout
+[ Follower   1  at  1 ]  {AppEntry Handler, L: 2} SIGNAL RESET election timeout
+
+[ Follower   1  at  1 ]   RESETTED Election Timer to 447 ms at 1 ms
+
+[ Follower   0  at  1 ]   RESETTED Election Timer to 411 ms at 1 ms
+[ Candidate   1  at  3 ]   REACHED Election Timeout at 429 ms
+[ Candidate   1  at  3 ]   New Election Timeout = 403
+
+[ Candidate   1  at  3 ]   START New Election
+[ Candidate   1  at  3 ]   Changed to CANDIDATE - 1 :)
+[ Candidate   1  at  4 ]   ASKING vote from 0
+[ Candidate   1  at  4 ]   ASKING vote from 2
+[ Candidate   1  at  4 ]   RECEIVED vote from 0 Term = 0 Result = false
+[ Candidate   1  at  4 ]   RECEIVED vote from 2 Term = 0 Result = false
+[ Candidate   0  at  3 ]   REACHED Election Timeout at 445 ms
+[ Candidate   0  at  3 ]   New Election Timeout = 446
+
+[ Candidate   0  at  3 ]   START New Election
+[ Candidate   0  at  3 ]   Changed to CANDIDATE - 0 :)
+[ Candidate   0  at  4 ]   ASKING vote from 1
+[ Candidate   0  at  4 ]   ASKING vote from 2
+[ Candidate   0  at  4 ]   RECEIVED vote from 1 Term = 0 Result = false
+[ Candidate   0  at  4 ]   RECEIVED vote from 2 Term = 0 Result = false
+
+ => Disconnecting leader -  2  and  0  No majority
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+[ Leader   2  at  1 ]   SENDING Heartbeat to 0
+[ Leader   2  at  1 ]   SENDING Heartbeat to 1
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+[ Follower   0  at  1 ]   REACHED Election Timeout at 411 ms
+[ Follower   0  at  1 ]   New Election Timeout = 401
+
+[ Follower   0  at  1 ]   START New Election
+[ Follower   0  at  1 ]   Changed to CANDIDATE - 0 :)
+[ Candidate   0  at  2 ]   ASKING vote from 1
+[ Candidate   0  at  2 ]   ASKING vote from 2
+[ Leader   2  at  1 ]   SENDING Heartbeat to 0
+[ Leader   2  at  1 ]   SENDING Heartbeat to 1
+[ Candidate   1  at  4 ]   REACHED Election Timeout at 403 ms
+[ Candidate   1  at  4 ]   New Election Timeout = 414
+
+[ Candidate   1  at  4 ]   START New Election
+[ Candidate   1  at  4 ]   Changed to CANDIDATE - 1 :)
+[ Candidate   1  at  5 ]   ASKING vote from 0
+[ Candidate   1  at  5 ]   ASKING vote from 2
+[ Candidate   1  at  5 ]   RECEIVED vote from 0 Term = 0 Result = false
+[ Candidate   1  at  5 ]   RECEIVED vote from 2 Term = 0 Result = false
+[ Follower   1  at  1 ]   REACHED Election Timeout at 447 ms
+[ Follower   1  at  1 ]   New Election Timeout = 442
+
+[ Follower   1  at  1 ]   START New Election
+[ Follower   1  at  1 ]   Changed to CANDIDATE - 1 :)
+[ Candidate   1  at  2 ]   ASKING vote from 0
+[ Candidate   1  at  2 ]   ASKING vote from 2
+[ Candidate   0  at  4 ]   REACHED Election Timeout at 446 ms
+[ Candidate   0  at  4 ]   New Election Timeout = 427
+
+[ Candidate   0  at  4 ]   START New Election
+[ Candidate   0  at  4 ]   Changed to CANDIDATE - 0 :)
+[ Candidate   0  at  5 ]   ASKING vote from 1
+[ Candidate   0  at  5 ]   ASKING vote from 2
+[ Candidate   0  at  5 ]   RECEIVED vote from 1 Term = 0 Result = false
+[ Candidate   0  at  5 ]   RECEIVED vote from 2 Term = 0 Result = false
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+[ Leader   2  at  1 ]   SENDING Heartbeat to 0
+[ Leader   2  at  1 ]   SENDING Heartbeat to 1
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+[ Candidate   0  at  2 ]   REACHED Election Timeout at 401 ms
+[ Candidate   0  at  2 ]   New Election Timeout = 432
+
+[ Candidate   0  at  2 ]   START New Election
+[ Candidate   0  at  2 ]   Changed to CANDIDATE - 0 :)
+[ Candidate   0  at  3 ]   ASKING vote from 1
+[ Candidate   0  at  3 ]   ASKING vote from 2
+[ Candidate   0  at  3 ]   RECEIVED vote from 2 Term = 0 Result = false
+[ Candidate   1  at  5 ]   REACHED Election Timeout at 414 ms
+[ Candidate   1  at  5 ]   New Election Timeout = 416
+
+[ Candidate   1  at  5 ]   START New Election
+[ Candidate   1  at  5 ]   Changed to CANDIDATE - 1 :)
+[ Candidate   1  at  6 ]   ASKING vote from 0
+[ Candidate   1  at  6 ]   ASKING vote from 2
+[ Candidate   1  at  6 ]   RECEIVED vote from 0 Term = 0 Result = false
+[ Candidate   1  at  6 ]   RECEIVED vote from 2 Term = 0 Result = false
+[ Leader   2  at  1 ]   SENDING Heartbeat to 0
+[ Leader   2  at  1 ]   SENDING Heartbeat to 1
+[ Candidate   1  at  2 ]   REACHED Election Timeout at 442 ms
+[ Candidate   1  at  2 ]   New Election Timeout = 409
+
+[ Candidate   1  at  2 ]   START New Election
+[ Candidate   1  at  2 ]   Changed to CANDIDATE - 1 :)
+[ Candidate   1  at  3 ]   ASKING vote from 0
+[ Candidate   1  at  3 ]   ASKING vote from 2
+[ Candidate   0  at  5 ]   REACHED Election Timeout at 427 ms
+[ Candidate   0  at  5 ]   New Election Timeout = 403
+
+[ Candidate   0  at  5 ]   START New Election
+[ Candidate   0  at  5 ]   Changed to CANDIDATE - 0 :)
+[ Candidate   0  at  6 ]   ASKING vote from 1
+[ Candidate   0  at  6 ]   ASKING vote from 2
+[ Candidate   0  at  6 ]   RECEIVED vote from 1 Term = 0 Result = false
+[ Candidate   0  at  6 ]   RECEIVED vote from 2 Term = 0 Result = false
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+[ Leader   2  at  1 ]   SENDING Heartbeat to 0
+[ Leader   2  at  1 ]   SENDING Heartbeat to 1
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+[ Candidate   0  at  3 ]   REACHED Election Timeout at 432 ms
+[ Candidate   0  at  3 ]   New Election Timeout = 428
+
+[ Candidate   0  at  3 ]   START New Election
+[ Candidate   0  at  3 ]   Changed to CANDIDATE - 0 :)
+[ Candidate   0  at  4 ]   ASKING vote from 1
+[ Candidate   0  at  4 ]   ASKING vote from 2
+[ Candidate   1  at  6 ]   REACHED Election Timeout at 416 ms
+[ Candidate   1  at  6 ]   New Election Timeout = 428
+
+[ Candidate   1  at  6 ]   START New Election
+[ Candidate   1  at  6 ]   Changed to CANDIDATE - 1 :)
+[ Candidate   1  at  7 ]   ASKING vote from 0
+[ Candidate   1  at  7 ]   ASKING vote from 2
+[ Candidate   1  at  7 ]   RECEIVED vote from 0 Term = 0 Result = false
+[ Candidate   1  at  7 ]   RECEIVED vote from 2 Term = 0 Result = false
+[ Candidate   1  at  3 ]   REACHED Election Timeout at 409 ms
+[ Candidate   1  at  3 ]   New Election Timeout = 438
+
+[ Candidate   1  at  3 ]   START New Election
+[ Candidate   1  at  3 ]   Changed to CANDIDATE - 1 :)
+[ Candidate   1  at  4 ]   ASKING vote from 0
+[ Candidate   1  at  4 ]   ASKING vote from 2
+[ Candidate   0  at  6 ]   REACHED Election Timeout at 403 ms
+[ Candidate   0  at  6 ]   New Election Timeout = 426
+
+[ Candidate   0  at  6 ]   START New Election
+[ Candidate   0  at  6 ]   Changed to CANDIDATE - 0 :)
+[ Candidate   0  at  7 ]   ASKING vote from 1
+[ Candidate   0  at  7 ]   ASKING vote from 2
+[ Candidate   0  at  7 ]   RECEIVED vote from 1 Term = 0 Result = false
+[ Candidate   0  at  7 ]   RECEIVED vote from 2 Term = 0 Result = false
+[ Leader   2  at  1 ]   SENDING Heartbeat to 0
+[ Leader   2  at  1 ]   SENDING Heartbeat to 1
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+[ Leader   2  at  1 ]   SENDING Heartbeat to 0
+[ Leader   2  at  1 ]   SENDING Heartbeat to 1
+
+ => Reconnecting leader -  0  Yes Majority
+[ Candidate   1  at  2 ]   RECEIVED vote from 2 Term = 0 Result = false
+[ Candidate   0  at  4 ]   RECEIVED vote from 1 Term = 0 Result = false
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+[ Candidate   0  at  4 ]   REACHED Election Timeout at 428 ms
+[ Candidate   0  at  4 ]   New Election Timeout = 428
+
+[ Candidate   0  at  4 ]   START New Election
+[ Candidate   0  at  4 ]   Changed to CANDIDATE - 0 :)
+[ Candidate   0  at  5 ]   ASKING vote from 1
+[ Candidate   0  at  5 ]   ASKING vote from 2
+[ Follower   1  at  5 ]   Changed to FOLLOWER - 1 :( , Reason:  RequestVote RPC handler - Candidate has a newer term than me!
+[ Follower   1  at  5 ]  {Vote Handler, C: 0} PASS Candidate Term at 0
+[ Follower   1  at  5 ]  {Vote Handler, C: 0} SIGNAL RESET election timer As VOTE GRANTED 
+
+[ Follower   1  at  5 ]   RESETTED Election Timer to 414 ms at 1 ms
+[ Candidate   0  at  5 ]   RECEIVED vote from 1 Term = 5 Result = true
+
+[ Candidate   0  at  5 ]   Vote Count Majority ACHIEVED :) in correct Term, Votes Got = 2, Majority = 2
+
+[ Leader   0  at  5 ]   -- YAYY I am the new LEADER 0 :)
+
+[ Leader   0  at  5 ]   SIGNAL STOP election timer 0
+
+[ Leader   0  at  5 ]   STARTING Periodic Heartbeats 
+[ Leader   0  at  5 ]   STOPPED Election Timer at 4 ms, exiting..
+[ Candidate   1  at  7 ]   REACHED Election Timeout at 428 ms
+[ Candidate   1  at  7 ]   New Election Timeout = 415
+
+[ Candidate   1  at  7 ]   START New Election
+[ Candidate   1  at  7 ]   Changed to CANDIDATE - 1 :)
+[ Candidate   1  at  8 ]   ASKING vote from 0
+[ Candidate   1  at  8 ]   ASKING vote from 2
+[ Candidate   1  at  8 ]   RECEIVED vote from 0 Term = 0 Result = false
+[ Leader   2  at  1 ]   RECEIVED vote from 1 Term = 0 Result = false
+[ Candidate   1  at  8 ]   RECEIVED vote from 2 Term = 0 Result = false
+[ Candidate   0  at  7 ]   REACHED Election Timeout at 426 ms
+[ Candidate   0  at  7 ]   New Election Timeout = 405
+
+[ Candidate   0  at  7 ]   START New Election
+[ Candidate   0  at  7 ]   Changed to CANDIDATE - 0 :)
+[ Candidate   0  at  8 ]   ASKING vote from 1
+[ Candidate   0  at  8 ]   ASKING vote from 2
+[ Candidate   0  at  8 ]   RECEIVED vote from 1 Term = 0 Result = false
+[ Candidate   0  at  8 ]   RECEIVED vote from 2 Term = 0 Result = false
+[ Leader   2  at  1 ]   SENDING Heartbeat to 0
+[ Leader   2  at  1 ]   SENDING Heartbeat to 1
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+[ Leader   0  at  5 ]   SENDING Heartbeat to 1
+[ Leader   0  at  5 ]   SENDING Heartbeat to 2
+[ Follower   1  at  5 ]  {AppEntry Handler, L: 0} PASS Leader Term at 5
+[ Follower   1  at  5 ]  {AppEntry Handler, L: 0} SIGNAL RESET election timeout
+
+[ Follower   1  at  5 ]   RESETTED Election Timer to 428 ms at 1 ms
+[ Leader   2  at  1 ]   SENDING Heartbeat to 0
+[ Leader   2  at  1 ]   SENDING Heartbeat to 1
+
+ => Reconnecting leader -  2  re-join of last node shouldn't prevent leader from existing.
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+[ Leader   0  at  5 ]   SENDING Heartbeat to 1
+[ Leader   0  at  5 ]   SENDING Heartbeat to 2
+[ Candidate   1  at  8 ]   REACHED Election Timeout at 415 ms
+[ Candidate   1  at  8 ]   New Election Timeout = 444
+
+[ Candidate   1  at  8 ]   START New Election
+[ Candidate   1  at  8 ]   Changed to CANDIDATE - 1 :)
+[ Follower   1  at  5 ]  {AppEntry Handler, L: 0} PASS Leader Term at 5
+[ Follower   1  at  5 ]  {AppEntry Handler, L: 0} SIGNAL RESET election timeout
+[ Candidate   1  at  9 ]   ASKING vote from 0
+
+[ Follower   1  at  5 ]   RESETTED Election Timer to 443 ms at 1 ms
+[ Candidate   1  at  9 ]   RECEIVED vote from 0 Term = 0 Result = false
+[ Candidate   1  at  9 ]   ASKING vote from 2
+[ Leader   2  at  1 ]  {AppEntry Handler, L: 0} PASS Leader Term at 5
+[ Leader   2  at  1 ]  {AppEntry Handler, L: 0} SIGNAL RESET election timeout
+[ Candidate   1  at  9 ]   RECEIVED vote from 2 Term = 0 Result = false
+[ Candidate   0  at  8 ]   REACHED Election Timeout at 405 ms
+[ Candidate   0  at  8 ]   New Election Timeout = 431
+
+[ Candidate   0  at  8 ]   START New Election
+[ Candidate   0  at  8 ]   Changed to CANDIDATE - 0 :)
+[ Candidate   0  at  9 ]   ASKING vote from 1
+[ Candidate   0  at  9 ]   ASKING vote from 2
+[ Candidate   0  at  9 ]   RECEIVED vote from 1 Term = 0 Result = false
+[ Candidate   0  at  9 ]   RECEIVED vote from 2 Term = 0 Result = false
+[ Follower   1  at  4 ]   RECEIVED vote from 2 Term = 0 Result = false
+[ Leader   2  at  1 ]   SENDING Heartbeat to 0
+[ Leader   2  at  1 ]   SENDING Heartbeat to 1
+[ Follower   1  at  5 ]  {AppEntry Handler, L: 2} FAIL Term Mismatch Leader Term at 1
+[ Leader   0  at  5 ]  {AppEntry Handler, L: 2} FAIL Term Mismatch Leader Term at 1
+[ Leader   2  at  5 ]   STOPPED Heartbeat
+[ Leader   2  at  5 ]   SIGNAL STEP DOWN from LEADER to FOLLOWER..
+[ Follower   2  at  5 ]   Changed to FOLLOWER - 2 :( , Reason: STEP DOWN from LEADER to FOLLOWER
+[ Follower   2  at  5 ]   BEGIN election timer
+[ Follower   2  at  5 ]   New Election Timeout = 444
+
+[ Follower   2  at  5 ]   RESETTED Election Timer to 418 ms at 1 ms
+[ Leader   2  at  0 ]   SENDING Heartbeat to 0
+[ Leader   2  at  0 ]   SENDING Heartbeat to 1
+[ Leader   0  at  5 ]   SENDING Heartbeat to 1
+[ Leader   0  at  5 ]   SENDING Heartbeat to 2
+[ Follower   2  at  5 ]  {AppEntry Handler, L: 0} PASS Leader Term at 5
+[ Follower   2  at  5 ]  {AppEntry Handler, L: 0} SIGNAL RESET election timeout
+[ Follower   1  at  5 ]  {AppEntry Handler, L: 0} PASS Leader Term at 5
+[ Follower   1  at  5 ]  {AppEntry Handler, L: 0} SIGNAL RESET election timeout
+
+[ Follower   1  at  5 ]   RESETTED Election Timer to 445 ms at 1 ms
+
+[ Follower   2  at  5 ]   RESETTED Election Timer to 429 ms at 1 ms
+  ... Passed --   5.1  3   56    0
+[ Follower   0  at  -1 ]   Changed to FOLLOWER - 0 :( , Reason: Initialize
+[ Follower   0  at  -1 ]   BEGIN election timer
+[ Follower   0  at  -1 ]   New Election Timeout = 435
+[ Follower   1  at  -1 ]   Changed to FOLLOWER - 1 :( , Reason: Initialize
+[ Follower   1  at  -1 ]   BEGIN election timer
+[ Follower   1  at  -1 ]   New Election Timeout = 435
+[ Follower   2  at  -1 ]   Changed to FOLLOWER - 2 :( , Reason: Initialize
+[ Follower   2  at  -1 ]   BEGIN election timer
+[ Follower   2  at  -1 ]   New Election Timeout = 419
+[ Follower   3  at  -1 ]   Changed to FOLLOWER - 3 :( , Reason: Initialize
+[ Follower   3  at  -1 ]   BEGIN election timer
+[ Follower   3  at  -1 ]   New Election Timeout = 417
+[ Follower   4  at  -1 ]   Changed to FOLLOWER - 4 :( , Reason: Initialize
+[ Follower   4  at  -1 ]   BEGIN election timer
+[ Follower   4  at  -1 ]   New Election Timeout = 440

@@ -17,12 +17,25 @@ package raft
 //   in the same server.
 //
 
-import "sync"
+import (
+	"math/rand"
+	"strconv"
+	"sync"
+	"time"
+)
 import "labrpc"
 
 // import "bytes"
 // import "labgob"
 
+
+var CANDIDATE string = "Candidate"
+var FOLLOWER string = "Follower"
+var LEADER string = "Leader"
+var TIMER_STOP string = "TIMER_STOP"
+var TIMER_RESET string = "TIMER_RESET"
+var HEARTBEAT_TIMEOUT int = 220
+var ELECTION_TIMEOUT int =400
 
 
 //
@@ -54,6 +67,18 @@ type Raft struct {
 	// Your data here (2A, 2B, 2C).
 	// Look at the paper's Figure 2 for a description of what
 	// state a Raft server must maintain.
+	wg sync.WaitGroup
+	electionOp string
+	hearbeatOp string
+	majorityReceived bool
+	state string
+	CurrentTerm int
+	VotedFor int
+	Log []int
+	CommitIndex int
+	LastApplied int
+	NextIndex []int
+	MatchIndex []int
 
 }
 
@@ -64,6 +89,15 @@ func (rf *Raft) GetState() (int, bool) {
 	var term int
 	var isleader bool
 	// Your code here (2A).
+
+	rf.mu.Lock()
+	term = rf.CurrentTerm
+	if rf.state == LEADER {
+		isleader = true
+	} else {
+		isleader = false
+	}
+	rf.mu.Unlock()
 	return term, isleader
 }
 
@@ -108,7 +142,20 @@ func (rf *Raft) readPersist(data []byte) {
 }
 
 
+type AppendEntriesArgs struct {
+ 	Term int
+ 	LeaderId int
+ 	PrevLogIndex int
+ 	PrevLogTerm int
+ 	Entries[] int
+ 	LeaderCommit int
 
+}
+
+type AppendEntriesReply struct {
+	Term int
+	Success bool
+}
 
 //
 // example RequestVote RPC arguments structure.
@@ -116,6 +163,10 @@ func (rf *Raft) readPersist(data []byte) {
 //
 type RequestVoteArgs struct {
 	// Your data here (2A, 2B).
+	Term int
+	CandidateId int
+	LastLogIndex int
+	LastLogTerm int
 }
 
 //
@@ -124,6 +175,8 @@ type RequestVoteArgs struct {
 //
 type RequestVoteReply struct {
 	// Your data here (2A).
+	Term int
+	VoteGranted bool
 }
 
 //
@@ -131,6 +184,69 @@ type RequestVoteReply struct {
 //
 func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	// Your code here (2A, 2B).
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
+
+	candidateTerm := args.Term
+	myTerm := rf.CurrentTerm
+
+	if candidateTerm < myTerm {
+		reply.Term = myTerm
+		reply.VoteGranted = false
+		rf.log(rf.me,rf.state,rf.CurrentTerm, "{Vote Handler, C: "+strconv.Itoa(args.CandidateId)+"} FAIL Term Mismatch Candidate Term at "+strconv.Itoa(args.CandidateId), false)
+		return
+	} else if candidateTerm > myTerm {
+		// Candidate has a newer term than you
+		rf.VotedFor = -1
+		rf.CurrentTerm = candidateTerm
+		rf.becomeFollower(" RequestVote RPC handler - Candidate has a newer term than me!")
+	}
+
+	// If Candidate term is >= mine
+	if rf.VotedFor == -1 || rf.VotedFor == args.CandidateId{
+
+		// Grant vote to Candidate
+		rf.VotedFor = args.CandidateId
+
+		reply.Term = candidateTerm
+		reply.VoteGranted = true
+
+		// Vote granted, reset my election timer
+
+		rf.log(rf.me,rf.state,rf.CurrentTerm, "{Vote Handler, C: "+strconv.Itoa(args.CandidateId)+"} PASS Candidate Term at "+strconv.Itoa(args.CandidateId), false)
+		rf.log(rf.me,rf.state,rf.CurrentTerm, "{Vote Handler, C: "+strconv.Itoa(args.CandidateId)+"} SIGNAL RESET election timer As VOTE GRANTED ", false)
+		rf.electionOp = "RESET"
+	} else if rf.VotedFor != -1 {
+		rf.log(rf.me,rf.state,rf.CurrentTerm, "{Vote Handler, C: "+strconv.Itoa(args.CandidateId)+"} Already Voted in this term to " + strconv.Itoa(rf.VotedFor), false)
+	}
+
+
+
+}
+
+// Append Entry Handler
+func (rf *Raft) AppendEntry(args *AppendEntriesArgs, reply *AppendEntriesReply) {
+
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
+
+
+	leaderTerm := args.Term
+	myTerm := rf.CurrentTerm
+	reply.Term = myTerm
+
+
+	if leaderTerm < myTerm {
+		reply.Success = false
+		rf.log(rf.me,rf.state,rf.CurrentTerm, "{AppEntry Handler, L: "+strconv.Itoa(args.LeaderId)+"} FAIL Term Mismatch Leader Term at "+strconv.Itoa(args.Term), false)
+		return
+	}
+
+	rf.log(rf.me,rf.state,rf.CurrentTerm, "{AppEntry Handler, L: "+strconv.Itoa(args.LeaderId)+"} PASS Leader Term at "+strconv.Itoa(args.Term), false)
+	reply.Success = true
+	rf.log(rf.me,rf.state,rf.CurrentTerm, "{AppEntry Handler, L: "+strconv.Itoa(args.LeaderId)+"} SIGNAL RESET election timeout", false)
+	rf.electionOp = "RESET"
+
 }
 
 //
@@ -166,6 +282,12 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 	ok := rf.peers[server].Call("Raft.RequestVote", args, reply)
 	return ok
 }
+
+func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *AppendEntriesReply) bool {
+	ok := rf.peers[server].Call("Raft.AppendEntry", args, reply)
+	return ok
+}
+
 
 
 //
@@ -226,6 +348,244 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	// initialize from state persisted before a crash
 	rf.readPersist(persister.ReadRaftState())
 
+	rf.electionOp = ""
+	rf.hearbeatOp = ""
+	rf.majorityReceived = false
+
+	rf.VotedFor = -1
+	rf.CurrentTerm = -1
+	rf.becomeFollower("Initialize")
 
 	return rf
+}
+
+
+func (rf *Raft) electionTimer() {
+	var i int
+	for {
+		rf.mu.Lock()
+		electionTimeout := rf.getRandomTimeout()
+		rf.log(rf.me,rf.state,rf.CurrentTerm, " New Election Timeout = "+ strconv.Itoa(electionTimeout), false)
+		rf.mu.Unlock()
+
+		// Run election timer
+		for i=1;i<=electionTimeout;i++ {
+			rf.mu.Lock()
+			if rf.electionOp == "STOP" {
+				rf.log(rf.me,rf.state,rf.CurrentTerm, " STOPPED Election Timer at "+strconv.Itoa(i)+" ms, exiting..", false)
+				rf.electionOp = ""
+				rf.mu.Unlock()
+				return
+			} else if rf.electionOp == "RESET" {
+				i = 1
+				electionTimeout = rf.getRandomTimeout()
+				rf.log(rf.me,rf.state,rf.CurrentTerm, " RESETTED Election Timer to "+strconv.Itoa(electionTimeout)+" ms at "+strconv.Itoa(i)+" ms", true)
+				rf.electionOp = ""
+				rf.mu.Unlock()
+				continue
+			} else {
+				rf.mu.Unlock()
+			}
+
+			time.Sleep(time.Millisecond)
+			rf.mu.Lock()
+			if i == electionTimeout {
+				rf.log(rf.me,rf.state,rf.CurrentTerm, " REACHED Election Timeout at "+strconv.Itoa(electionTimeout)+" ms", false)
+				rf.mu.Unlock()
+				go rf.startElection()
+			} else {
+				rf.mu.Unlock()
+			}
+		}
+	}
+}
+
+func (rf *Raft) startElection()  {
+	rf.mu.Lock()
+	rf.log(rf.me,rf.state,rf.CurrentTerm, " START New Election", true)
+
+	rf.becomeCandidate()
+
+	rf.CurrentTerm += 1
+	currentTerm := rf.CurrentTerm
+	me := rf.me
+	rf.VotedFor = me
+
+	voteCount := 1
+	majority := int(len(rf.peers)/2) + 1
+	rf.mu.Unlock()
+
+	// Send Request Vote RPC to all peers in parallel
+	for  peer, _ := range rf.peers{
+		if peer != me {
+			go func(peer int, me int, currentTerm int) {
+				rf.mu.Lock()
+				requestVoteArgs := RequestVoteArgs{
+					Term: currentTerm,
+					CandidateId: me,
+					LastLogIndex: -1,
+					LastLogTerm: -1, // Need to change
+				}
+				requestVoteReply := RequestVoteReply{}
+				rf.log(rf.me,rf.state,rf.CurrentTerm, " ASKING vote from " + strconv.Itoa(peer), false)
+				rf.mu.Unlock()
+
+				rf.sendRequestVote(peer,&requestVoteArgs, &requestVoteReply)
+
+				// Handle the reply
+				rf.mu.Lock()
+				//todo should it be rf.state or state?
+				rf.log(me,rf.state,currentTerm, " RECEIVED vote from " + strconv.Itoa(peer) + " Term = " + strconv.Itoa(requestVoteReply.Term) + " Result = " + strconv.FormatBool(requestVoteReply.VoteGranted), false)
+
+				resultTerm := requestVoteReply.Term
+				resultGrant := requestVoteReply.VoteGranted
+				rf.mu.Unlock()
+
+				if resultTerm > currentTerm {
+					rf.mu.Lock()
+					rf.CurrentTerm = resultTerm
+					rf.mu.Unlock()
+					rf.becomeFollower("Candidate Term is STALE")
+				} else {
+					if resultGrant {
+						rf.mu.Lock()
+						voteCount++
+						rf.mu.Unlock()
+					}
+				}
+
+				rf.mu.Lock()
+				// ---- Vote Count ----
+				if currentTerm == rf.CurrentTerm {
+					if voteCount >= majority{
+						if !rf.majorityReceived {
+							rf.log(rf.me,rf.state,rf.CurrentTerm, " Vote Count Majority ACHIEVED :) in correct Term, Votes Got = " + strconv.Itoa(voteCount)+", Majority = " + strconv.Itoa(majority), true)
+							rf.becomeLeader()
+						} else {
+							if requestVoteReply.VoteGranted {
+								rf.log(rf.me, rf.state, rf.CurrentTerm, " Already a LEADER!", true)
+							}
+						}
+					}
+				}
+
+				rf.mu.Unlock()
+
+			}(peer, me, currentTerm)
+		}
+	}
+}
+
+func (rf *Raft) heartbeatTimer() {
+	rf.log(rf.me,rf.state,rf.CurrentTerm, " STARTING Periodic Heartbeats ", true)
+	var indx int
+	for{
+
+		// Run heartbeat timer
+		for indx=1;indx<=HEARTBEAT_TIMEOUT;indx++ {
+			rf.mu.Lock()
+			if rf.hearbeatOp == "STOP" {
+				rf.log(rf.me,rf.state,rf.CurrentTerm, " STOPPED Heartbeat", false)
+				rf.log(rf.me,rf.state,rf.CurrentTerm, " SIGNAL STEP DOWN from LEADER to FOLLOWER..", false)
+				rf.becomeFollower("STEP DOWN from LEADER to FOLLOWER")
+				rf.hearbeatOp = ""
+				rf.mu.Unlock()
+				return
+			}
+			rf.mu.Unlock()
+			time.Sleep(time.Millisecond)
+			if indx == HEARTBEAT_TIMEOUT {
+				go rf.sendHeartBeat()
+			}
+		}
+	}
+}
+
+func (rf *Raft) sendHeartBeat()  {
+	rf.mu.Lock()
+
+	leaderTerm := rf.CurrentTerm
+	leaderId := rf.me
+
+	rf.mu.Unlock()
+
+	var wg sync.WaitGroup
+	// Send Heartbeat to all peers in parallel
+	for  peer, _ := range rf.peers {
+		if peer != leaderId {
+			wg.Add(1)
+			rf.log(leaderId,rf.state,rf.CurrentTerm, " SENDING Heartbeat to "+strconv.Itoa(peer), false)
+			go func(peer int, leaderId int, wg *sync.WaitGroup) {
+
+				rf.mu.Lock()
+				appendEntryArgs := AppendEntriesArgs{
+					Term:         leaderTerm,
+					LeaderId:     leaderId,
+					PrevLogIndex: -1,
+					PrevLogTerm:  -1,
+					Entries:      nil,
+					LeaderCommit: -1,
+				}
+
+				appendEntryReply := AppendEntriesReply{}
+				rf.mu.Unlock()
+
+				rf.sendAppendEntry(peer,&appendEntryArgs, &appendEntryReply)
+
+				// Handle reply
+
+				rf.mu.Lock()
+				if leaderTerm < appendEntryReply.Term {
+					rf.CurrentTerm = appendEntryReply.Term
+					rf.hearbeatOp = "STOP"
+				}
+				rf.mu.Unlock()
+				wg.Done()
+			}(peer, leaderId, &wg)
+		}
+	}
+	wg.Wait()
+}
+
+func (rf *Raft) becomeLeader()  {
+
+	rf.state = LEADER
+	rf.majorityReceived = true
+
+	rf.log(rf.me,rf.state,rf.CurrentTerm, " -- YAYY I am the new LEADER " + strconv.Itoa(rf.me) +" :)", true)
+	rf.log(rf.me,rf.state,rf.CurrentTerm, " SIGNAL STOP election timer " + strconv.Itoa(rf.me), true)
+	rf.electionOp = "STOP"
+
+	// Start the heartbeat timer
+	go rf.heartbeatTimer()
+}
+
+func (rf *Raft) becomeCandidate()  {
+	rf.log(rf.me,rf.state,rf.CurrentTerm, " Changed to CANDIDATE - " + strconv.Itoa(rf.me) +" :)", false)
+	rf.state = CANDIDATE
+	rf.majorityReceived = false
+}
+
+func (rf *Raft) becomeFollower(reason string)  {
+	pastState := rf.state
+	rf.state = FOLLOWER
+	rf.majorityReceived = false
+
+	rf.log(rf.me,rf.state,rf.CurrentTerm, " Changed to FOLLOWER - " + strconv.Itoa(rf.me) +" :( , Reason: " + reason, false)
+	if pastState == LEADER || pastState == "" {
+		rf.log(rf.me,rf.state,rf.CurrentTerm, " BEGIN election timer", false)
+		go rf.electionTimer()
+	}
+}
+
+func (rf *Raft) getRandomTimeout() int{
+	return rand.Intn(50) + ELECTION_TIMEOUT
+}
+
+func (rf *Raft) log(me int, state string, term int, line string, newLine bool) {
+	if newLine {
+		//fmt.Println("\n[",state," ",me," at ",term, "] ",line)
+	} else {
+		//fmt.Println("[",state," ",me," at ",term, "] ",line)
+	}
 }
