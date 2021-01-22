@@ -299,6 +299,12 @@ loop:
 	cfg.end()
 }
 
+func printLogs(cfg *config, servers int) {
+	for i := 0; i < servers; i++ {
+		cfg.rafts[i].PrintServerState()
+	}
+}
+
 func TestRejoin2B(t *testing.T) {
 	servers := 3
 	cfg := make_config(t, servers, false)
@@ -307,10 +313,14 @@ func TestRejoin2B(t *testing.T) {
 	cfg.begin("Test (2B): rejoin of partitioned leader")
 
 	cfg.one(101, servers, true)
+	fmt.Println("\n\t=> YESS! Agreed on command = 101")
+	//printLogs(cfg, servers)
 
 	// leader network failure
 	leader1 := cfg.checkOneLeader()
+	fmt.Println("\n\t=> Disconnecting Leader1 = ",leader1)
 	cfg.disconnect(leader1)
+
 
 	// make old leader try to agree on some entries
 	cfg.rafts[leader1].Start(102)
@@ -319,93 +329,142 @@ func TestRejoin2B(t *testing.T) {
 
 	// new leader commits, also for index=2
 	cfg.one(103, 2, true)
+	fmt.Println("\n\t=> YESS! Agreed on command = 103")
+	//printLogs(cfg, servers)
+
 
 	// new leader network failure
 	leader2 := cfg.checkOneLeader()
+	fmt.Println("\n\t=> Disconnecting Leader2 = ",leader2)
 	cfg.disconnect(leader2)
 
+
 	// old leader connected again
+	fmt.Println("\t=> Reconnecting Leader1 = ",leader1)
 	cfg.connect(leader1)
 
+
 	cfg.one(104, 2, true)
+	fmt.Println("\n\t=> YESS! Agreed on command = 104")
+	//printLogs(cfg, servers)
 
 	// all together now
+	fmt.Println("\n\t=> Reconnecting Leader2 = ",leader2)
 	cfg.connect(leader2)
 
 	cfg.one(105, servers, true)
+	fmt.Println("\n\t=> YESS! Agreed on command = 105")
+	printLogs(cfg, servers)
 
 	cfg.end()
 }
 
 func TestBackup2B(t *testing.T) {
 	servers := 5
+	numLogs := 3
 	cfg := make_config(t, servers, false)
 	defer cfg.cleanup()
 
 	cfg.begin("Test (2B): leader backs up quickly over incorrect follower logs")
 
-	cfg.one(rand.Int(), servers, true)
+	cfg.one(1100, servers, true)
 
 	// put leader and one follower in a partition
 	leader1 := cfg.checkOneLeader()
+	fmt.Println("\n\t=> Leader1 = ",leader1)
+	fmt.Println("\n\t=> Disconnecting = ",(leader1 + 2) % servers)
 	cfg.disconnect((leader1 + 2) % servers)
+	fmt.Println("\n\t=> Disconnecting = ",(leader1 + 3) % servers)
 	cfg.disconnect((leader1 + 3) % servers)
+	fmt.Println("\n\t=> Disconnecting = ",(leader1 + 4) % servers)
 	cfg.disconnect((leader1 + 4) % servers)
 
 	// submit lots of commands that won't commit
-	for i := 0; i < 50; i++ {
-		cfg.rafts[leader1].Start(rand.Int())
+	fmt.Println("\nSubmit lots of commands that won't commit")
+	for i := 0; i < numLogs; i++ {
+		cfg.rafts[leader1].Start(i)
 	}
 
 	time.Sleep(RaftElectionTimeout / 2)
 
+	printLogs(cfg, servers)
+
+
+	fmt.Println("\n\t=> Disconnecting = ",(leader1 + 0) % servers)
 	cfg.disconnect((leader1 + 0) % servers)
+	fmt.Println("\n\t=> Disconnecting = ",(leader1 + 1) % servers)
 	cfg.disconnect((leader1 + 1) % servers)
 
 	// allow other partition to recover
+	fmt.Println("\n\t=> Reconnecting = ",(leader1 + 2) % servers)
 	cfg.connect((leader1 + 2) % servers)
+	fmt.Println("\n\t=> Reconnecting = ",(leader1 + 3) % servers)
 	cfg.connect((leader1 + 3) % servers)
+	fmt.Println("\n\t=> Reconnecting = ",(leader1 + 4) % servers)
 	cfg.connect((leader1 + 4) % servers)
 
 	// lots of successful commands to new group.
-	for i := 0; i < 50; i++ {
-		cfg.one(rand.Int(), 3, true)
+	fmt.Println("\nLots of successful commands to new group.")
+	for i := 0; i < numLogs; i++ {
+		cfg.one(i, 3, true)
 	}
 
+	printLogs(cfg, servers)
+
 	// now another partitioned leader and one follower
+	fmt.Println("\nNow another partitioned leader and one follower")
 	leader2 := cfg.checkOneLeader()
 	other := (leader1 + 2) % servers
 	if leader2 == other {
 		other = (leader2 + 1) % servers
 	}
+	fmt.Println("\n\t=> Leader2 = ",leader2)
+	fmt.Println("\n\t=> Disconnecting = ",other)
 	cfg.disconnect(other)
 
 	// lots more commands that won't commit
-	for i := 0; i < 50; i++ {
-		cfg.rafts[leader2].Start(rand.Int())
+	fmt.Println("\nLots more commands that won't commit")
+	for i := 0; i < numLogs; i++ {
+		cfg.rafts[leader2].Start(i)
 	}
 
 	time.Sleep(RaftElectionTimeout / 2)
 
+	printLogs(cfg, servers)
+
 	// bring original leader back to life,
+	fmt.Println("\nBring original leader back to life")
 	for i := 0; i < servers; i++ {
+		fmt.Println("\n\t=> Disconnecting = ",i)
 		cfg.disconnect(i)
 	}
+	fmt.Println("\n\t=> Reconnecting = ",(leader1 + 0) % servers)
 	cfg.connect((leader1 + 0) % servers)
+	fmt.Println("\n\t=> Reconnecting = ",(leader1 + 1) % servers)
 	cfg.connect((leader1 + 1) % servers)
+	fmt.Println("\n\t=> Reconnecting = ",other)
 	cfg.connect(other)
 
+	printLogs(cfg, servers)
+
 	// lots of successful commands to new group.
-	for i := 0; i < 50; i++ {
-		cfg.one(rand.Int(), 3, true)
+	fmt.Println("\nLots of successful commands to new group.")
+	for i := 0; i < numLogs; i++ {
+		cfg.one(i, 3, true)
 	}
+
+	printLogs(cfg, servers)
 
 	// now everyone
+	fmt.Println("\nNow connecting everyone...")
+
 	for i := 0; i < servers; i++ {
+		fmt.Println("\n\t=> Reconnecting = ",i)
 		cfg.connect(i)
 	}
-	cfg.one(rand.Int(), servers, true)
+	cfg.one(1101, servers, true)
 
+	printLogs(cfg, servers)
 	cfg.end()
 }
 
