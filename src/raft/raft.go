@@ -18,7 +18,9 @@ package raft
 //
 
 import (
+	"bytes"
 	"fmt"
+	"labgob"
 	"math/rand"
 	"strconv"
 	"sync"
@@ -29,9 +31,9 @@ import "labrpc"
 var CANDIDATE = "Candidate"
 var FOLLOWER = "Follower"
 var LEADER = "Leader"
-var HeartbeatTimeout = 220
-var ElectionTimeout =400
-var enableLog = true
+var HeartbeatTimeout = 100
+var ElectionTimeout =250
+var enableLog = false
 
 type LOG struct {
 	Term int
@@ -89,18 +91,19 @@ type Raft struct {
 // believes it is the leader.
 func (rf *Raft) GetState() (int, bool) {
 
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
+
 	var term int
 	var isleader bool
 	// Your code here (2A).
 
-	rf.mu.Lock()
 	term = rf.CurrentTerm
 	if rf.state == LEADER {
 		isleader = true
 	} else {
 		isleader = false
 	}
-	rf.mu.Unlock()
 	return term, isleader
 }
 
@@ -113,12 +116,13 @@ func (rf *Raft) GetState() (int, bool) {
 func (rf *Raft) persist() {
 	// Your code here (2C).
 	// Example:
-	// w := new(bytes.Buffer)
-	// e := labgob.NewEncoder(w)
-	// e.Encode(rf.xxx)
-	// e.Encode(rf.yyy)
-	// data := w.Bytes()
-	// rf.persister.SaveRaftState(data)
+	w := new(bytes.Buffer)
+	e := labgob.NewEncoder(w)
+	e.Encode(rf.CurrentTerm)
+	e.Encode(rf.VotedFor)
+	e.Encode(rf.Log)
+	data := w.Bytes()
+	rf.persister.SaveRaftState(data)
 }
 
 
@@ -131,17 +135,30 @@ func (rf *Raft) readPersist(data []byte) {
 	}
 	// Your code here (2C).
 	// Example:
-	// r := bytes.NewBuffer(data)
-	// d := labgob.NewDecoder(r)
-	// var xxx
-	// var yyy
-	// if d.Decode(&xxx) != nil ||
-	//    d.Decode(&yyy) != nil {
-	//   error...
-	// } else {
-	//   rf.xxx = xxx
-	//   rf.yyy = yyy
-	// }
+	r := bytes.NewBuffer(data)
+	d := labgob.NewDecoder(r)
+	var CurrentTerm int
+	var VotedFor int
+	var Logs []LOG
+
+	if d.Decode(&CurrentTerm) != nil{
+		rf.log(rf.me,rf.state,rf.CurrentTerm, " CurrentTerm Decode Error", false)
+	} else {
+		rf.CurrentTerm = CurrentTerm
+	}
+
+	if d.Decode(&VotedFor) != nil{
+		rf.log(rf.me,rf.state,rf.CurrentTerm, " VotedFor Decode Error", false)
+	} else {
+		rf.VotedFor = VotedFor
+	}
+
+	if d.Decode(&Logs) != nil{
+		rf.log(rf.me,rf.state,rf.CurrentTerm, " Logs Decode Error", false)
+	} else {
+		rf.Log = Logs
+	}
+
 }
 
 
@@ -158,6 +175,8 @@ type AppendEntriesArgs struct {
 type AppendEntriesReply struct {
 	Term int
 	Success bool
+	ConflictTerm int
+	ConflictIndex int
 }
 
 //
@@ -192,37 +211,20 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 
 	candidateTerm := args.Term
 	myTerm := rf.CurrentTerm
-
-	reply.Term = myTerm
 	reply.VoteGranted = false
 
-	//Reply false if term < currentTerm (§5.1)
-	if candidateTerm < myTerm {
-		reply.Term = myTerm
-		rf.log(rf.me,rf.state,rf.CurrentTerm, "{Vote Handler, C: "+strconv.Itoa(args.CandidateId)+"} FAIL Term Mismatch Candidate Term at "+strconv.Itoa(candidateTerm), false)
-		return
-	}
 
 	//If RPC request or response contains term T > currentTerm:
 	//set currentTerm = T, convert to follower (§5.1)
 	if candidateTerm > myTerm {
 		// Candidate has a newer term than you
-		rf.VotedFor = -1
 		rf.becomeFollower("{Vote Handler, C: "+strconv.Itoa(args.CandidateId)+"} Candidate has a newer term than me! Term = "+strconv.Itoa(candidateTerm))
 		rf.CurrentTerm = candidateTerm
-		reply.Term = candidateTerm
-		//if rf.state == LEADER {
-		//	rf.log(rf.me,rf.state,rf.CurrentTerm, "{Vote Handler, C: "+strconv.Itoa(args.CandidateId)+"} Candidate has a newer term than me! Term = "+strconv.Itoa(candidateTerm), false)
-		//	rf.CurrentTerm = candidateTerm
-		//	rf.hearbeatOp = "STOP"
-		//} else {
-		//	rf.CurrentTerm = candidateTerm
-		//	rf.becomeFollower("{Vote Handler, C: "+strconv.Itoa(args.CandidateId)+"} Candidate has a newer term than me! Term = "+strconv.Itoa(candidateTerm))
-		//}
 	}
 
+	reply.Term = rf.CurrentTerm
 	// If Candidate term is >= mine
-	if rf.VotedFor == -1 || rf.VotedFor == args.CandidateId {
+	if  rf.CurrentTerm == candidateTerm && (rf.VotedFor == -1 || rf.VotedFor == args.CandidateId) {
 
 		// Check up-to-date - Prove if Candidate is more upto date than receiver
 		isCandidateUptoDate := false
@@ -246,8 +248,8 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 		if isCandidateUptoDate {
 			// Grant vote to Candidate
 			rf.VotedFor = args.CandidateId
+			rf.persist()
 
-			reply.Term = candidateTerm
 			reply.VoteGranted = true
 
 			// Vote granted, reset my election timer
@@ -255,7 +257,6 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 			rf.resetElectionTimer(-1)
 		} else {
 			// Not up-to-date
-			reply.Term = myTerm
 			reply.VoteGranted = false
 			rf.log(rf.me, rf.state, rf.CurrentTerm, "{Vote Handler, C: "+strconv.Itoa(args.CandidateId)+"} Candidate is not up-to-date! ", false)
 		}
@@ -275,87 +276,103 @@ func (rf *Raft) AppendEntry(args *AppendEntriesArgs, reply *AppendEntriesReply) 
 
 	leaderTerm := args.Term
 	myTerm := rf.CurrentTerm
-	reply.Term = myTerm
-
-	// Reply false if term < currentTerm (§5.1)
-	if leaderTerm < myTerm {
-		reply.Success = false
-		rf.log(rf.me,rf.state,rf.CurrentTerm, "{AppEntry Handler, L: "+strconv.Itoa(args.LeaderId)+"} FAIL Leader Term = "+strconv.Itoa(leaderTerm) + " < myTerm = " + strconv.Itoa(myTerm), false)
-		return
-	}
+	reply.Success = false
+	reply.ConflictIndex = -2 // Default
+	reply.ConflictTerm = -2
 
 	//If RPC request or response contains term T > currentTerm:
 	//set currentTerm = T, convert to follower (§5.1)
 	if leaderTerm > myTerm {
-		//rf.log(rf.me,rf.state,rf.CurrentTerm, "{AppEntry Handler, L: "+strconv.Itoa(args.LeaderId)+"} FAIL Leader Term = "+strconv.Itoa(leaderTerm) + " > myTerm = " + strconv.Itoa(myTerm), false)
-		//if rf.isLeader() {
-		//	rf.hearbeatOp = "STOP"
-		//} else {
-		//	rf.becomeFollower("New leader kicked me out!")
-		//}
 		rf.becomeFollower("{AppEntry Handler, L: "+strconv.Itoa(args.LeaderId)+"} FAIL Leader Term = "+strconv.Itoa(leaderTerm) + " > myTerm = " + strconv.Itoa(myTerm))
 		rf.CurrentTerm = leaderTerm
-		reply.Term = leaderTerm
+		rf.persist()
 	}
 
-	// you get an AppendEntries RPC from the current leader (i.e., if the term in the AppendEntries arguments is outdated, you should not reset your timer);
-	rf.resetElectionTimer(args.LeaderId)
+	reply.Term = rf.CurrentTerm
+	if leaderTerm == myTerm {
 
-	//rf.log(rf.me,rf.state,rf.CurrentTerm, "CHECK Append Log PLI = " + strconv.Itoa(args.PrevLogIndex) + " len log = " + strconv.Itoa(len(rf.Log)), false)
+		if rf.state != FOLLOWER {
+			rf.becomeFollower("{AppEntry Handler, L: "+strconv.Itoa(args.LeaderId)+"} Convert to follower")
+		}
 
-	if args.PrevLogIndex < len(rf.Log){
+		// you get an AppendEntries RPC from the current leader (i.e., if the term in the AppendEntries arguments is outdated, you should not reset your timer);
+		rf.resetElectionTimer(args.LeaderId)
+
+		//  -- Backtrack --
+
+		// PrevLogIndex out of bounds
+		if args.PrevLogIndex >= len(rf.Log) {
+			reply.ConflictIndex = len(rf.Log)
+		} else {
+			if rf.Log[args.PrevLogIndex].Term != args.PrevLogTerm {
+				reply.ConflictTerm = rf.Log[args.PrevLogIndex].Term
+
+
+				for i:= args.PrevLogIndex; i>=0; i-- {
+					if rf.Log[i].Term != reply.ConflictTerm {
+						reply.ConflictIndex = i+1
+						break
+					}
+				}
+			}
+		}
+
+		// If there is a Conflict
+		if reply.ConflictIndex != -2 {
+			rf.log(rf.me, rf.state, rf.CurrentTerm, "{AppEntry Handler, L: "+strconv.Itoa(args.LeaderId)+"} Conflict found, Conflict Index = " + strconv.Itoa(reply.ConflictIndex) + ", Conflict Term = " + strconv.Itoa(reply.ConflictTerm), true)
+			return
+		}
+
 
 		//  Reply false if log doesn’t contain an entry at prevLogIndex
 		//  whose term matches prevLogTerm (§5.3)
-		if (args.PrevLogIndex == 0 && len(rf.Log) == 1) ||  rf.Log[args.PrevLogIndex].Term == args.PrevLogTerm {
+		if args.PrevLogIndex == -1 || (args.PrevLogIndex < len(rf.Log) && rf.Log[args.PrevLogIndex].Term == args.PrevLogTerm) {
 			//rf.log(rf.me,rf.state,rf.CurrentTerm, "INSIDE Append Log PLI = " + strconv.Itoa(args.PrevLogIndex) + " len log = " + strconv.Itoa(len(rf.Log)), false)
 
-				// Proper append entry
-				oneTimeTruncate := false // to truncate once
-				// Append Logs
-				for i := 0; i < len(args.Entries); i++ {
-					followerLogIndex := args.PrevLogIndex + i + 1
+			// Proper append entry
+			var entryIndex int
 
-					// Overlapping logs
-					if followerLogIndex < len(rf.Log) && !oneTimeTruncate {
-						if rf.Log[followerLogIndex].Term != args.Entries[i].Term {
+			followerLogIndex := args.PrevLogIndex + 1
+			// Append Logs
+			for entryIndex = 0; entryIndex < len(args.Entries); entryIndex++ {
 
-							// If an existing entry conflicts with a new one (same index
-							// but different terms), delete the existing entry and all that
-							// follow it (§5.3)
-							rf.log(rf.me, rf.state, rf.CurrentTerm, "{AppEntry Handler, L: "+strconv.Itoa(args.LeaderId)+"} Overlap", true)
+				// Overlapping logs
+				if followerLogIndex < len(rf.Log) {
+					if rf.Log[followerLogIndex].Term != args.Entries[entryIndex].Term {
 
-							rf.Log = rf.Log[:followerLogIndex]
-							oneTimeTruncate = true
-						}
+						// If an existing entry conflicts with a new one (same index
+						// but different terms), delete the existing entry and all that
+						// follow it (§5.3)
+						rf.log(rf.me, rf.state, rf.CurrentTerm, "{AppEntry Handler, L: "+strconv.Itoa(args.LeaderId)+"} Overlap at My Log Index = "+strconv.Itoa(followerLogIndex), true)
+						rf.Log = rf.Log[:followerLogIndex]
+						break
 					}
-					rf.Log = append(rf.Log, args.Entries[i])
+				} else {
+					break
 				}
+				followerLogIndex++
+			}
 
+			if entryIndex < len(args.Entries) {
+				rf.Log = append(rf.Log, args.Entries[entryIndex:]...)
+			}
 
 			// --Update commitIndex
 			//If leaderCommit > commitIndex, set commitIndex =
 			//	min(leaderCommit, index of last new entry)
 			if args.LeaderCommit > rf.CommitIndex {
-				if args.LeaderCommit < (len(rf.Log)-1) {
+				if args.LeaderCommit < (len(rf.Log) - 1) {
 					rf.CommitIndex = args.LeaderCommit
 				} else {
 					rf.CommitIndex = len(rf.Log) - 1
 				}
-				rf.log(rf.me,rf.state,rf.CurrentTerm, "{AppEntry Handler, L: "+strconv.Itoa(args.LeaderId)+"} Follower UPDATE Commit Index - "+strconv.Itoa(rf.CommitIndex), true)
+				rf.log(rf.me, rf.state, rf.CurrentTerm, "{AppEntry Handler, L: "+strconv.Itoa(args.LeaderId)+"} Follower UPDATE Commit Index - "+strconv.Itoa(rf.CommitIndex), true)
 			}
+
 			reply.Success = true
-			rf.log(rf.me,rf.state,rf.CurrentTerm, "{AppEntry Handler, L: "+strconv.Itoa(args.LeaderId)+"} PASS Logs appended! Leader term = "+strconv.Itoa(args.Term)+"\nMy Logs are = ", true, rf.Log)
-		} else {
-			// Term is incorrect at PrevLogIndex
-			rf.log(rf.me,rf.state,rf.CurrentTerm, "{AppEntry Handler, L: "+strconv.Itoa(args.LeaderId)+"} FAIL Term incorrect at PrevLogIndex - T: "+strconv.Itoa(rf.Log[args.PrevLogIndex].Term), true)
-			reply.Success = false
-			return
+			rf.log(rf.me, rf.state, rf.CurrentTerm, "{AppEntry Handler, L: "+strconv.Itoa(args.LeaderId)+"} PASS Logs appended! Leader term = "+strconv.Itoa(args.Term)+"\nMy Logs are = ", true, rf.Log)
+			rf.persist()
 		}
-	} else {
-		rf.log(rf.me,rf.state,rf.CurrentTerm, "{AppEntry Handler, L: "+strconv.Itoa(args.LeaderId)+"} FAIL Out of Index PrevLogIndex = " + strconv.Itoa(args.PrevLogIndex), false)
-		reply.Success = false
-		return
 	}
 }
 
@@ -454,6 +471,10 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 //
 func (rf *Raft) Kill() {
 	// Your code here, if desired.
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
+	rf.hearbeatOp = "STOP"
+	rf.electionOp = "STOP"
 }
 
 //
@@ -475,10 +496,6 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.me = me
 
 	// Your initialization code here (2A, 2B, 2C).
-
-	// initialize from state persisted before a crash
-	rf.readPersist(persister.ReadRaftState())
-
 	rf.electionOp = ""
 	rf.hearbeatOp = ""
 	rf.majorityReceived = false
@@ -497,11 +514,15 @@ func Make(peers []*labrpc.ClientEnd, me int,
 		Command: nil,
 	})
 
-	go rf.startLogApplyService(applyCh)
-
 	rf.mu.Lock()
 	rf.becomeFollower("Initialize")
+	// initialize from state persisted before a crash
+	rf.readPersist(persister.ReadRaftState())
 	rf.mu.Unlock()
+
+	go rf.startLogApplyService(applyCh)
+
+
 
 	return rf
 }
@@ -539,7 +560,6 @@ func (rf *Raft) startLogApplyService(applych chan ApplyMsg){
 }
 
 func (rf *Raft) electionTimer() {
-	var i int
 	for {
 		rf.mu.Lock()
 		electionTimeout := rf.getRandomTimeout()
@@ -547,19 +567,10 @@ func (rf *Raft) electionTimer() {
 		rf.mu.Unlock()
 
 		// Run election timer
-		for i=1;i<=electionTimeout;i++ {
+		for i:=1;i<=electionTimeout;i++ {
 
-			rf.mu.Lock()
-			if rf.isLeader() {
-				rf.mu.Unlock()
-				time.Sleep(time.Millisecond)
-				continue
-			}
-			rf.mu.Unlock()
-
-			rf.mu.Lock()
 			//fmt.Println("\tElection me = ",rf.me," term = ",rf.CurrentTerm, " indx = ",i)
-
+			rf.mu.Lock()
 			if rf.electionOp == "STOP" {
 				rf.log(rf.me,rf.state,rf.CurrentTerm, " STOPPED Election Timer at "+strconv.Itoa(i)+" ms, exiting..", false)
 				rf.electionOp = ""
@@ -578,7 +589,7 @@ func (rf *Raft) electionTimer() {
 			time.Sleep(time.Millisecond)
 
 			rf.mu.Lock()
-			if i == electionTimeout {
+			if i == electionTimeout && !rf.isLeader() {
 				rf.log(rf.me,rf.state,rf.CurrentTerm, " REACHED Election Timeout at "+strconv.Itoa(electionTimeout)+" ms", false)
 				rf.mu.Unlock()
 				go rf.startElection()
@@ -596,7 +607,7 @@ func (rf *Raft) startElection()  {
 	rf.becomeCandidate()
 
 	rf.CurrentTerm += 1
-	currentTerm := rf.CurrentTerm
+	savedCurrTerm := rf.CurrentTerm
 
 	me := rf.me
 	rf.VotedFor = me
@@ -608,26 +619,20 @@ func (rf *Raft) startElection()  {
 	majority := len(rf.peers)/2 + 1
 
 	requestVoteArgs := RequestVoteArgs{
-		Term: currentTerm,
+		Term: savedCurrTerm,
 		CandidateId: me,
 		LastLogIndex: lastLogIndex,
 		LastLogTerm: lastLogTerm,
 	}
-
-
 	rf.mu.Unlock()
 
 	// Send Request Vote RPC to all peers in parallel
 	for  peer, _ := range rf.peers{
+
 		if peer != me {
 			go func(peer int, me int, requestVoteArgs RequestVoteArgs) {
 				rf.mu.Lock()
 
-				if !rf.isCandidate() {
-					rf.log(requestVoteArgs.CandidateId, rf.state, rf.CurrentTerm, " {STATE CHANGE - Before Send RequestVote} Not a Candidate anymore! ", false)
-					rf.mu.Unlock()
-					return
-				}
 
 				requestVoteReply := RequestVoteReply{}
 				rf.log(rf.me,rf.state,rf.CurrentTerm, " ASKING vote from " + strconv.Itoa(peer), false)
@@ -642,43 +647,29 @@ func (rf *Raft) startElection()  {
 				resultTerm := requestVoteReply.Term
 				resultGrant := requestVoteReply.VoteGranted
 
-				// 1. CANDIDATE Check
-				if !rf.isCandidate() {
-					rf.log(requestVoteArgs.CandidateId, rf.state, rf.CurrentTerm, " {STATE CHANGE - After Send RequestVote} Not a Candidate anymore! ", false)
-					rf.mu.Unlock()
-					return
-				}
-
-				// 2. Current Term Check - Old RPC reply
-				if requestVoteArgs.Term != rf.CurrentTerm {
-					rf.log(rf.me, rf.state, rf.CurrentTerm, " {TERM MISMATCH} Term changed = " + strconv.Itoa(requestVoteArgs.Term) , false)
-					rf.mu.Unlock()
-					return
-				}
-
 				// 3. Reply Term Check
-				if resultTerm > rf.CurrentTerm {
-					rf.becomeFollower("{OLD TERM} I am an expired CANDIDATE, new term = " + strconv.Itoa(resultTerm))
-					rf.CurrentTerm = resultTerm
-					rf.mu.Unlock()
-					return
-				}
+				if rf.isCandidate() {
+					if resultTerm > savedCurrTerm {
+						rf.becomeFollower("{OLD TERM} I am an expired CANDIDATE, new term = " + strconv.Itoa(resultTerm))
+						rf.CurrentTerm = resultTerm
+						rf.mu.Unlock()
+						return
+					} else if resultTerm == savedCurrTerm {
+						rf.log(me, rf.state, savedCurrTerm, " RECEIVED vote from "+strconv.Itoa(peer)+" Term = "+strconv.Itoa(requestVoteReply.Term)+" Result = "+strconv.FormatBool(requestVoteReply.VoteGranted), false)
 
-
-				rf.log(me,rf.state,currentTerm, " RECEIVED vote from " + strconv.Itoa(peer) + " Term = " + strconv.Itoa(requestVoteReply.Term) + " Result = " + strconv.FormatBool(requestVoteReply.VoteGranted), false)
-
-				if resultGrant {
-					voteCount++
-				}
-
-				// ---- Vote Count ----
-				if voteCount >= majority{
-					if !rf.majorityReceived {
-						rf.log(rf.me,rf.state,rf.CurrentTerm, " Vote Count Majority ACHIEVED :) in correct Term, Votes Got = " + strconv.Itoa(voteCount)+", Majority = " + strconv.Itoa(majority), true)
-						rf.becomeLeader()
-					} else {
-						if requestVoteReply.VoteGranted {
-							rf.log(rf.me, rf.state, rf.CurrentTerm, " Already a LEADER!", true)
+						if resultGrant {
+							voteCount++
+							// ---- Vote Count ----
+							if voteCount >= majority {
+								if !rf.majorityReceived {
+									rf.log(rf.me, rf.state, rf.CurrentTerm, " Vote Count Majority ACHIEVED :) in correct Term, Votes Got = "+strconv.Itoa(voteCount)+", Majority = "+strconv.Itoa(majority), true)
+									rf.becomeLeader()
+								} else {
+									if requestVoteReply.VoteGranted {
+										rf.log(rf.me, rf.state, rf.CurrentTerm, " Already a LEADER!", true)
+									}
+								}
+							}
 						}
 					}
 				}
@@ -692,20 +683,15 @@ func (rf *Raft) startElection()  {
 func (rf *Raft) heartbeatTimer() {
 	rf.mu.Lock()
 	rf.log(rf.me,rf.state,rf.CurrentTerm, " STARTING Periodic Heartbeats ", true)
-	var indx int
-
-	// Send heartbeat immediately if you are the leader
-	if rf.immediateHeartbeat {
-		rf.immediateHeartbeat = false
-		go rf.prepareAndSendAppendEntry()
-	}
 	rf.mu.Unlock()
 
 	for{
-
 		// Run heartbeat timer
-		for indx=1;indx<= HeartbeatTimeout;indx++ {
+		for indx := 1;indx <= HeartbeatTimeout; indx++ {
 			rf.mu.Lock()
+			if indx == 1 {
+				go rf.prepareAndSendAppendEntry()
+			}
 			//fmt.Println("\tHeartbeat L=",rf.me," time - ",indx)
 			if rf.hearbeatOp == "STOP" {
 				rf.log(rf.me,rf.state,rf.CurrentTerm, " STOPPED Heartbeat", false)
@@ -715,36 +701,15 @@ func (rf *Raft) heartbeatTimer() {
 			}
 			rf.mu.Unlock()
 			time.Sleep(time.Millisecond)
-			rf.mu.Lock()
-			if indx == HeartbeatTimeout {
-				go rf.prepareAndSendAppendEntry()
-			}
-			rf.mu.Unlock()
 		}
 	}
-}
-
-func (rf *Raft) getPrevLogInfo() (int,int) {
-	prevLogIndex := rf.CommitIndex
-	prevLogTerm := rf.Log[prevLogIndex].Term
-	//if len(rf.Log) > 0 {
-	//	prevLogIndex = len(rf.Log) - 1 // Preceding the new one
-	//	prevLogTerm = rf.Log[prevLogIndex].Term
-	//}
-	return prevLogIndex, prevLogTerm
 }
 
 func (rf *Raft) prepareAndSendAppendEntry() {
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
 
-	majority := len(rf.peers)/2 + 1
-
-	if !rf.isLeader() {
-		rf.log(rf.me,rf.state,rf.CurrentTerm, "I am not the Leader, so I am stopping my heartbeats", false, rf.Log)
-		rf.hearbeatOp = "STOP"
-		return
-	}
+	savedCurrTerm := rf.CurrentTerm
 
 	rf.log(rf.me,rf.state,rf.CurrentTerm, "Leader Logs are", false, rf.Log)
 
@@ -755,7 +720,7 @@ func (rf *Raft) prepareAndSendAppendEntry() {
 				prevLogTerm := rf.Log[prevLogIndex].Term
 
 				appendEntryArgs := AppendEntriesArgs{
-					Term:         rf.CurrentTerm,
+					Term:         savedCurrTerm,
 					LeaderId:     rf.me,
 					PrevLogIndex: prevLogIndex,
 					PrevLogTerm:  prevLogTerm,
@@ -767,12 +732,6 @@ func (rf *Raft) prepareAndSendAppendEntry() {
 				go func(peer int, appendEntryArgs AppendEntriesArgs, wg *sync.WaitGroup) {
 
 					rf.mu.Lock()
-					if !rf.isLeader() {
-						rf.log(appendEntryArgs.LeaderId, rf.state, rf.CurrentTerm, " {STATE CHANGE - Before Send AppendEntry} Not a Leader anymore! ", false)
-						rf.mu.Unlock()
-						return
-					}
-
 					appendEntryReply := AppendEntriesReply{}
 
 					// Proper append entry
@@ -783,7 +742,6 @@ func (rf *Raft) prepareAndSendAppendEntry() {
 						// Just a heartbeat
 						appendEntryArgs.Entries = nil
 						rf.log(appendEntryArgs.LeaderId, rf.state, rf.CurrentTerm, " SENDING Heartbeat to "+strconv.Itoa(peer)+", NextIndex = "+strconv.Itoa(rf.NextIndex[peer]), false)
-
 					}
 
 					rf.printAppendEntries(appendEntryArgs)
@@ -794,24 +752,8 @@ func (rf *Raft) prepareAndSendAppendEntry() {
 					// ----- Handle reply -----
 					rf.mu.Lock()
 
-					// 1. LEADER Check
-					if !rf.isLeader() {
-						rf.log(appendEntryArgs.LeaderId, rf.state, rf.CurrentTerm, " {STATE CHANGE - After Send AppendEntry} Not a Leader anymore! ", false)
-						rf.mu.Unlock()
-						return
-					}
-
-					// 2. Current Term Check - Old RPC Reply
-					if appendEntryArgs.Term != rf.CurrentTerm {
-						rf.log(appendEntryArgs.LeaderId, rf.state, rf.CurrentTerm, " {TERM MISMATCH} Term changed = " + strconv.Itoa(appendEntryArgs.Term) , false)
-						//rf.hearbeatOp = "STOP"
-						//rf.becomeFollower(" {TERM MISMATCH} Term changed, Before = " + strconv.Itoa(appendEntryArgs.Term) + " Now = " + strconv.Itoa(rf.CurrentTerm))
-						rf.mu.Unlock()
-						return
-					}
-
 					// 3. Reply Term Check
-					if  appendEntryReply.Term > rf.CurrentTerm {
+					if  appendEntryReply.Term > savedCurrTerm {
 						//rf.log(appendEntryArgs.LeaderId, rf.state, rf.CurrentTerm, "The term has changed! This term =  " + strconv.Itoa(appendEntryReply.Term), false)
 						//rf.hearbeatOp = "STOP"
 						rf.becomeFollower("{OLD TERM} I am an expired leader, new term = " + strconv.Itoa(appendEntryReply.Term))
@@ -820,51 +762,64 @@ func (rf *Raft) prepareAndSendAppendEntry() {
 						return
 					}
 
-					if appendEntryReply.Success {
-						rf.MatchIndex[peer] = appendEntryArgs.PrevLogIndex + len(appendEntryArgs.Entries)
-						rf.NextIndex[peer] = rf.MatchIndex[peer] + 1
-						rf.log(appendEntryArgs.LeaderId, rf.state, rf.CurrentTerm, " SUCCESS APPEND_ENTRY to "+strconv.Itoa(peer)+" Match Index = "+strconv.Itoa(rf.MatchIndex[peer])+" Next Index = "+strconv.Itoa(rf.NextIndex[peer]), false)
+					if rf.isLeader() && savedCurrTerm == appendEntryReply.Term {
+						if appendEntryReply.Success {
+							rf.MatchIndex[peer] = appendEntryArgs.PrevLogIndex + len(appendEntryArgs.Entries)
+							rf.NextIndex[peer] = rf.MatchIndex[peer] + 1
+							rf.log(appendEntryArgs.LeaderId, rf.state, rf.CurrentTerm, " SUCCESS APPEND_ENTRY to "+strconv.Itoa(peer)+" Match Index = "+strconv.Itoa(rf.MatchIndex[peer])+" Next Index = "+strconv.Itoa(rf.NextIndex[peer]), false)
 
-						// -- Calculate Majority for commitIndex
+							// -- Calculate Majority for commitIndex
 
-						//If there exists an N such that N > commitIndex, a majority
-						//of matchIndex[i] ≥ N, and log[N].term == currentTerm:
-						//set commitIndex = N (§5.3, §5.4).
-						for N := rf.CommitIndex + 1; N < len(rf.Log); N++ {
-							majorityCount := 1
+							//If there exists an N such that N > commitIndex, a majority
+							//of matchIndex[i] ≥ N, and log[N].term == currentTerm:
+							//set commitIndex = N (§5.3, §5.4).
+							for N := rf.CommitIndex + 1; N < len(rf.Log); N++ {
+								majorityCount := 1
+								majority := len(rf.peers)/2 + 1
 
-							if rf.Log[N].Term == rf.CurrentTerm {
-								for i := 0; i < len(rf.peers); i++ {
-									if i != rf.me && rf.MatchIndex[i] >= N {
-										majorityCount++
+								if rf.Log[N].Term == rf.CurrentTerm {
+									for i := 0; i < len(rf.peers); i++ {
+										if i != rf.me && rf.MatchIndex[i] >= N {
+											majorityCount++
+										}
+									}
+
+									if majorityCount >= majority {
+										rf.CommitIndex = N
+										rf.log(rf.me, rf.state, rf.CurrentTerm, "-- MAJORITY = "+strconv.Itoa(majority)+" Commit Index - "+strconv.Itoa(rf.CommitIndex), true)
 									}
 								}
+							}
+						} else {
+							rf.log(appendEntryArgs.LeaderId, rf.state, rf.CurrentTerm, " FAIL APPEND_ENTRY to "+strconv.Itoa(peer)+" Reply term = "+strconv.Itoa(appendEntryReply.Term)+" Match Index = "+strconv.Itoa(rf.MatchIndex[peer])+" Next Index = "+strconv.Itoa(rf.NextIndex[peer]), false)
 
-								if majorityCount >= majority {
-									rf.CommitIndex = N
-									rf.log(rf.me, rf.state, rf.CurrentTerm, "-- MAJORITY = "+strconv.Itoa(majority)+" Commit Index - "+strconv.Itoa(rf.CommitIndex), true)
+							// Conflict found
+							if appendEntryReply.ConflictIndex != -2 {
+								if appendEntryReply.ConflictTerm != -2 {
+
+									found := false
+									for i:=0;i<len(rf.Log)-1;i++ {
+
+										if rf.Log[i].Term == appendEntryReply.ConflictTerm &&  rf.Log[i+1].Term != appendEntryReply.ConflictTerm {
+											rf.NextIndex[peer] = i+1
+											found = true
+											break
+										}
+									}
+
+									if !found {
+										rf.NextIndex[peer] = appendEntryReply.ConflictIndex
+									}
+
+								} else {
+									rf.NextIndex[peer] = appendEntryReply.ConflictIndex
 								}
 							}
+
+							if rf.NextIndex[peer] < 1 {
+								rf.NextIndex[peer] = 1
+							}
 						}
-					} else {
-						rf.log(appendEntryArgs.LeaderId, rf.state, rf.CurrentTerm, " FAIL APPEND_ENTRY to "+strconv.Itoa(peer)+" Reply term = " + strconv.Itoa(appendEntryReply.Term) +" Match Index = "+strconv.Itoa(rf.MatchIndex[peer])+" Next Index = "+strconv.Itoa(rf.NextIndex[peer]), false)
-
-						newNextIndex := rf.NextIndex[peer] - 1
-						rf.NextIndex[peer] = newNextIndex
-
-						if newNextIndex == 0 {
-							rf.NextIndex[peer] = 1
-						}
-
-						newPrevLogIndex := appendEntryArgs.PrevLogIndex - 1
-						appendEntryArgs.PrevLogIndex = newPrevLogIndex
-						if newPrevLogIndex < 0 {
-							appendEntryArgs.PrevLogIndex = 0
-						}
-						appendEntryArgs.PrevLogTerm = rf.Log[prevLogIndex].Term
-
-						// Just testing
-						rf.MatchIndex[peer] = rf.NextIndex[peer] - 1
 					}
 
 					rf.mu.Unlock()
@@ -882,8 +837,8 @@ func (rf *Raft) becomeLeader()  {
 	rf.majorityReceived = true
 
 	rf.log(rf.me,rf.state,rf.CurrentTerm, " -- YAYY I am the new LEADER " + strconv.Itoa(rf.me) +" :)", true)
-	rf.log(rf.me,rf.state,rf.CurrentTerm, " SIGNAL STOP election timer " + strconv.Itoa(rf.me), true)
-	rf.electionOp = "STOP"
+	//rf.log(rf.me,rf.state,rf.CurrentTerm, " SIGNAL STOP election timer " + strconv.Itoa(rf.me), true)
+	//rf.electionOp = "STOP"
 	rf.immediateHeartbeat = true
 
 	for i:=0;i<len(rf.peers);i++ {
@@ -926,8 +881,14 @@ func (rf *Raft) becomeCandidate()  {
 func (rf *Raft) becomeFollower(reason string)  {
 
 	pastState := rf.state
+
+	if pastState == FOLLOWER {
+		return
+	}
+
 	rf.state = FOLLOWER
 	rf.majorityReceived = false
+	rf.VotedFor = -1
 
 	rf.log(rf.me,rf.state,rf.CurrentTerm, " Changed to FOLLOWER - " + strconv.Itoa(rf.me) +" :( , Reason: " + reason, false)
 
@@ -1011,7 +972,7 @@ func (rf *Raft) printRequestVote(args RequestVoteArgs){
 		fmt.Println("  Term:\t\t", args.Term)
 		fmt.Println("  CandidateId:\t", args.CandidateId)
 		fmt.Println("  LastLogIndex:\t", args.LastLogIndex)
-		fmt.Println("  LastLogeTerm:\t", args.LastLogTerm)
+		fmt.Println("  LastLogTerm:\t", args.LastLogTerm)
 		fmt.Println("}")
 		fmt.Println()
 	}
