@@ -11,7 +11,6 @@ package raft
 //
 
 import "testing"
-import "fmt"
 import "time"
 import "math/rand"
 import "sync/atomic"
@@ -40,7 +39,7 @@ func TestInitialElection2A(t *testing.T) {
 	time.Sleep(2 * RaftElectionTimeout)
 	term2 := cfg.checkTerms()
 	if term1 != term2 {
-		fmt.Printf("warning: term changed even though there were no failures")
+		//fmt.Printf("warning: term changed even though there were no failures")
 	}
 
 	// there should still be a leader.
@@ -59,13 +58,13 @@ func TestReElection2A(t *testing.T) {
 	leader1 := cfg.checkOneLeader()
 
 	// if the leader disconnects, a new one should be elected.
-	fmt.Println("\n => Failing leader - ",leader1)
+	//fmt.Println("\n => Failing leader - ",leader1)
 	cfg.disconnect(leader1)
 	cfg.checkOneLeader()
 
 	// if the old leader rejoins, that shouldn't
 	// disturb the new leader.
-	fmt.Println("\n => Reconnecting leader - ",leader1)
+	//fmt.Println("\n => Reconnecting leader - ",leader1)
 	cfg.connect(leader1)
 	leader2 := cfg.checkOneLeader()
 
@@ -73,18 +72,18 @@ func TestReElection2A(t *testing.T) {
 	// be elected.
 	cfg.disconnect(leader2)
 	cfg.disconnect((leader2 + 1) % servers)
-	fmt.Println("\n => Disconnecting leader - ",leader2, " and ",(leader2 + 1) % servers, " No majority")
+	//fmt.Println("\n => Disconnecting leader - ",leader2, " and ",(leader2 + 1) % servers, " No majority")
 
 	time.Sleep(2 * RaftElectionTimeout)
 	cfg.checkNoLeader()
 
 	// if a quorum arises, it should elect a leader.
-	fmt.Println("\n => Reconnecting leader - ",(leader2 + 1) % servers, " Yes Majority")
+	//fmt.Println("\n => Reconnecting leader - ",(leader2 + 1) % servers, " Yes Majority")
 	cfg.connect((leader2 + 1) % servers)
 	cfg.checkOneLeader()
 
 	// re-join of last node shouldn't prevent leader from existing.
-	fmt.Println("\n => Reconnecting leader - ",leader2, " re-join of last node shouldn't prevent leader from existing.")
+	//fmt.Println("\n => Reconnecting leader - ",leader2, " re-join of last node shouldn't prevent leader from existing.")
 	cfg.connect(leader2)
 	cfg.checkOneLeader()
 
@@ -125,7 +124,7 @@ func TestFailAgree2B(t *testing.T) {
 
 	// follower network disconnection
 	leader := cfg.checkOneLeader()
-	fmt.Println("\n => Disconnecting - ",(leader + 1) % servers, " No majority")
+	//fmt.Println("\n => Disconnecting - ",(leader + 1) % servers, " No majority")
 	cfg.disconnect((leader + 1) % servers)
 
 	// agree despite one disconnected server?
@@ -136,7 +135,7 @@ func TestFailAgree2B(t *testing.T) {
 	cfg.one(105, servers-1, false)
 
 	// re-connect
-	fmt.Println("\n => Reconnecting - ",(leader + 1) % servers)
+	//fmt.Println("\n => Reconnecting - ",(leader + 1) % servers)
 	cfg.connect((leader + 1) % servers)
 
 	// agree with full set of servers?
@@ -154,22 +153,22 @@ func TestFailNoAgree2B(t *testing.T) {
 
 	cfg.begin("Test (2B): no agreement if too many followers disconnect")
 
-	fmt.Println("\n => Agreement on cmd 10")
+	//fmt.Println("\n => Agreement on cmd 10")
 	cfg.one(10, servers, false)
 	printLogs(cfg, servers)
 
 	// 3 of 5 followers disconnect
 	leader := cfg.checkOneLeader()
-	fmt.Println("\n => Leader - ",leader)
+	//fmt.Println("\n => Leader - ",leader)
 
-	fmt.Println("\n => Disconnecting - ",(leader + 1) % servers)
+	//fmt.Println("\n => Disconnecting - ",(leader + 1) % servers)
 	cfg.disconnect((leader + 1) % servers)
-	fmt.Println("\n => Disconnecting - ",(leader + 2) % servers)
+	//fmt.Println("\n => Disconnecting - ",(leader + 2) % servers)
 	cfg.disconnect((leader + 2) % servers)
-	fmt.Println("\n => Disconnecting - ",(leader + 3) % servers)
+	//fmt.Println("\n => Disconnecting - ",(leader + 3) % servers)
 	cfg.disconnect((leader + 3) % servers)
 
-	fmt.Println("\n => Start Agreement on cmd = 20")
+	//fmt.Println("\n => Start Agreement on cmd = 20")
 	index, _, ok := cfg.rafts[leader].Start(20)
 	if ok != true {
 		t.Fatalf("leader rejected Start()")
@@ -189,18 +188,18 @@ func TestFailNoAgree2B(t *testing.T) {
 
 
 	// repair
-	fmt.Println("\n => Reconnecting - ",(leader + 1) % servers)
+	//fmt.Println("\n => Reconnecting - ",(leader + 1) % servers)
 	cfg.connect((leader + 1) % servers)
-	fmt.Println("\n => Reconnecting - ",(leader + 2) % servers)
+	//fmt.Println("\n => Reconnecting - ",(leader + 2) % servers)
 	cfg.connect((leader + 2) % servers)
-	fmt.Println("\n => Reconnecting - ",(leader + 3) % servers)
+	//fmt.Println("\n => Reconnecting - ",(leader + 3) % servers)
 	cfg.connect((leader + 3) % servers)
 
 	// the disconnected majority may have chosen a leader from
 	// among their own ranks, forgetting index 2.
 	leader2 := cfg.checkOneLeader()
-	fmt.Println("\n => Leader2 - ",leader2)
-	fmt.Println("\n => Start Agreement on cmd = 30")
+	//fmt.Println("\n => Leader2 - ",leader2)
+	//fmt.Println("\n => Start Agreement on cmd = 30")
 	index2, _, ok2 := cfg.rafts[leader2].Start(30)
 	if ok2 == false {
 		t.Fatalf("leader2 rejected Start()")
@@ -211,7 +210,7 @@ func TestFailNoAgree2B(t *testing.T) {
 	printLogs(cfg,servers)
 
 
-	fmt.Println("\n => Start Agreement on cmd = 1000")
+	//fmt.Println("\n => Start Agreement on cmd = 1000")
 	cfg.one(1000, servers, true)
 	printLogs(cfg,servers)
 
@@ -320,9 +319,9 @@ loop:
 }
 
 func printLogs(cfg *config, servers int) {
-	for i := 0; i < servers; i++ {
-		cfg.rafts[i].PrintServerState()
-	}
+	//for i := 0; i < servers; i++ {
+	//	cfg.rafts[i].PrintServerState()
+	//}
 }
 
 func TestRejoin2B(t *testing.T) {
@@ -333,12 +332,12 @@ func TestRejoin2B(t *testing.T) {
 	cfg.begin("Test (2B): rejoin of partitioned leader")
 
 	cfg.one(101, servers, true)
-	fmt.Println("\n\t=> YESS! Agreed on command = 101")
+	//fmt.Println("\n\t=> YESS! Agreed on command = 101")
 	//printLogs(cfg, servers)
 
 	// leader network failure
 	leader1 := cfg.checkOneLeader()
-	fmt.Println("\n\t=> Disconnecting Leader1 = ",leader1)
+	//fmt.Println("\n\t=> Disconnecting Leader1 = ",leader1)
 	cfg.disconnect(leader1)
 
 
@@ -349,31 +348,31 @@ func TestRejoin2B(t *testing.T) {
 
 	// new leader commits, also for index=2
 	cfg.one(103, 2, true)
-	fmt.Println("\n\t=> YESS! Agreed on command = 103")
+	//fmt.Println("\n\t=> YESS! Agreed on command = 103")
 	//printLogs(cfg, servers)
 
 
 	// new leader network failure
 	leader2 := cfg.checkOneLeader()
-	fmt.Println("\n\t=> Disconnecting Leader2 = ",leader2)
+	//fmt.Println("\n\t=> Disconnecting Leader2 = ",leader2)
 	cfg.disconnect(leader2)
 
 
 	// old leader connected again
-	fmt.Println("\t=> Reconnecting Leader1 = ",leader1)
+	//fmt.Println("\t=> Reconnecting Leader1 = ",leader1)
 	cfg.connect(leader1)
 
 
 	cfg.one(104, 2, true)
-	fmt.Println("\n\t=> YESS! Agreed on command = 104")
+	//fmt.Println("\n\t=> YESS! Agreed on command = 104")
 	//printLogs(cfg, servers)
 
 	// all together now
-	fmt.Println("\n\t=> Reconnecting Leader2 = ",leader2)
+	//fmt.Println("\n\t=> Reconnecting Leader2 = ",leader2)
 	cfg.connect(leader2)
 
 	cfg.one(105, servers, true)
-	fmt.Println("\n\t=> YESS! Agreed on command = 105")
+	//fmt.Println("\n\t=> YESS! Agreed on command = 105")
 	printLogs(cfg, servers)
 
 	cfg.end()
@@ -391,16 +390,16 @@ func TestBackup2B(t *testing.T) {
 
 	// put leader and one follower in a partition
 	leader1 := cfg.checkOneLeader()
-	fmt.Println("\n\t=> Leader1 = ",leader1)
-	fmt.Println("\n\t=> Disconnecting = ",(leader1 + 2) % servers)
+	//fmt.Println("\n\t=> Leader1 = ",leader1)
+	//fmt.Println("\n\t=> Disconnecting = ",(leader1 + 2) % servers)
 	cfg.disconnect((leader1 + 2) % servers)
-	fmt.Println("\n\t=> Disconnecting = ",(leader1 + 3) % servers)
+	//fmt.Println("\n\t=> Disconnecting = ",(leader1 + 3) % servers)
 	cfg.disconnect((leader1 + 3) % servers)
-	fmt.Println("\n\t=> Disconnecting = ",(leader1 + 4) % servers)
+	//fmt.Println("\n\t=> Disconnecting = ",(leader1 + 4) % servers)
 	cfg.disconnect((leader1 + 4) % servers)
 
 	// submit lots of commands that won't commit
-	fmt.Println("\nSubmit lots of commands that won't commit")
+	//fmt.Println("\nSubmit lots of commands that won't commit")
 	for i := 0; i < numLogs; i++ {
 		cfg.rafts[leader1].Start(i)
 	}
@@ -410,21 +409,21 @@ func TestBackup2B(t *testing.T) {
 	//printLogs(cfg, servers)
 
 
-	fmt.Println("\n\t=> Disconnecting = ",(leader1 + 0) % servers)
+	//fmt.Println("\n\t=> Disconnecting = ",(leader1 + 0) % servers)
 	cfg.disconnect((leader1 + 0) % servers)
-	fmt.Println("\n\t=> Disconnecting = ",(leader1 + 1) % servers)
+	//fmt.Println("\n\t=> Disconnecting = ",(leader1 + 1) % servers)
 	cfg.disconnect((leader1 + 1) % servers)
 
 	// allow other partition to recover
-	fmt.Println("\n\t=> Reconnecting = ",(leader1 + 2) % servers)
+	//fmt.Println("\n\t=> Reconnecting = ",(leader1 + 2) % servers)
 	cfg.connect((leader1 + 2) % servers)
-	fmt.Println("\n\t=> Reconnecting = ",(leader1 + 3) % servers)
+	//fmt.Println("\n\t=> Reconnecting = ",(leader1 + 3) % servers)
 	cfg.connect((leader1 + 3) % servers)
-	fmt.Println("\n\t=> Reconnecting = ",(leader1 + 4) % servers)
+	//fmt.Println("\n\t=> Reconnecting = ",(leader1 + 4) % servers)
 	cfg.connect((leader1 + 4) % servers)
 
 	// lots of successful commands to new group.
-	fmt.Println("\nLots of successful commands to new group.")
+	//fmt.Println("\nLots of successful commands to new group.")
 	for i := 0; i < numLogs; i++ {
 		cfg.one(i, 3, true)
 	}
@@ -432,18 +431,18 @@ func TestBackup2B(t *testing.T) {
 	//printLogs(cfg, servers)
 
 	// now another partitioned leader and one follower
-	fmt.Println("\nNow another partitioned leader and one follower")
+	//fmt.Println("\nNow another partitioned leader and one follower")
 	leader2 := cfg.checkOneLeader()
 	other := (leader1 + 2) % servers
 	if leader2 == other {
 		other = (leader2 + 1) % servers
 	}
-	fmt.Println("\n\t=> Leader2 = ",leader2)
-	fmt.Println("\n\t=> Disconnecting = ",other)
+	//fmt.Println("\n\t=> Leader2 = ",leader2)
+	//fmt.Println("\n\t=> Disconnecting = ",other)
 	cfg.disconnect(other)
 
 	// lots more commands that won't commit
-	fmt.Println("\nLots more commands that won't commit")
+	//fmt.Println("\nLots more commands that won't commit")
 	for i := 0; i < numLogs; i++ {
 		cfg.rafts[leader2].Start(i)
 	}
@@ -453,22 +452,22 @@ func TestBackup2B(t *testing.T) {
 	//printLogs(cfg, servers)
 
 	// bring original leader back to life,
-	fmt.Println("\nBring original leader back to life")
+	//fmt.Println("\nBring original leader back to life")
 	for i := 0; i < servers; i++ {
-		fmt.Println("\n\t=> Disconnecting = ",i)
+		//fmt.Println("\n\t=> Disconnecting = ",i)
 		cfg.disconnect(i)
 	}
-	fmt.Println("\n\t=> Reconnecting = ",(leader1 + 0) % servers)
+	//fmt.Println("\n\t=> Reconnecting = ",(leader1 + 0) % servers)
 	cfg.connect((leader1 + 0) % servers)
-	fmt.Println("\n\t=> Reconnecting = ",(leader1 + 1) % servers)
+	//fmt.Println("\n\t=> Reconnecting = ",(leader1 + 1) % servers)
 	cfg.connect((leader1 + 1) % servers)
-	fmt.Println("\n\t=> Reconnecting = ",other)
+	//fmt.Println("\n\t=> Reconnecting = ",other)
 	cfg.connect(other)
 
 	//printLogs(cfg, servers)
 
 	// lots of successful commands to new group.
-	fmt.Println("\nLots of successful commands to new group.")
+	////fmt.Println("\nLots of successful commands to new group.")
 
 	//ISSUE
 	for i := 0; i < numLogs; i++ {
@@ -478,10 +477,10 @@ func TestBackup2B(t *testing.T) {
 	printLogs(cfg, servers)
 
 	// now everyone
-	fmt.Println("\nNow connecting everyone...")
+	//fmt.Println("\nNow connecting everyone...")
 
 	for i := 0; i < servers; i++ {
-		fmt.Println("\n\t=> Reconnecting = ",i)
+		//fmt.Println("\n\t=> Reconnecting = ",i)
 		cfg.connect(i)
 	}
 	cfg.one(1101, servers, true)

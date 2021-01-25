@@ -248,7 +248,6 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 		if isCandidateUptoDate {
 			// Grant vote to Candidate
 			rf.VotedFor = args.CandidateId
-			rf.persist()
 
 			reply.VoteGranted = true
 
@@ -265,6 +264,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	if rf.VotedFor != -1 {
 		rf.log(rf.me,rf.state,rf.CurrentTerm, "{Vote Handler, C: "+strconv.Itoa(args.CandidateId)+"} Already Voted in this term to " + strconv.Itoa(rf.VotedFor), false)
 	}
+	rf.persist()
 
 }
 
@@ -285,7 +285,6 @@ func (rf *Raft) AppendEntry(args *AppendEntriesArgs, reply *AppendEntriesReply) 
 	if leaderTerm > myTerm {
 		rf.becomeFollower("{AppEntry Handler, L: "+strconv.Itoa(args.LeaderId)+"} FAIL Leader Term = "+strconv.Itoa(leaderTerm) + " > myTerm = " + strconv.Itoa(myTerm))
 		rf.CurrentTerm = leaderTerm
-		rf.persist()
 	}
 
 	reply.Term = rf.CurrentTerm
@@ -320,7 +319,6 @@ func (rf *Raft) AppendEntry(args *AppendEntriesArgs, reply *AppendEntriesReply) 
 		// If there is a Conflict
 		if reply.ConflictIndex != -2 {
 			rf.log(rf.me, rf.state, rf.CurrentTerm, "{AppEntry Handler, L: "+strconv.Itoa(args.LeaderId)+"} Conflict found, Conflict Index = " + strconv.Itoa(reply.ConflictIndex) + ", Conflict Term = " + strconv.Itoa(reply.ConflictTerm), true)
-			return
 		}
 
 
@@ -371,9 +369,10 @@ func (rf *Raft) AppendEntry(args *AppendEntriesArgs, reply *AppendEntriesReply) 
 
 			reply.Success = true
 			rf.log(rf.me, rf.state, rf.CurrentTerm, "{AppEntry Handler, L: "+strconv.Itoa(args.LeaderId)+"} PASS Logs appended! Leader term = "+strconv.Itoa(args.Term)+"\nMy Logs are = ", true, rf.Log)
-			rf.persist()
 		}
 	}
+	rf.persist()
+
 }
 
 func (rf *Raft) resetElectionTimer(leaderId int) {
@@ -456,6 +455,8 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 			Command: command,
 			Term:    rf.CurrentTerm,
 		})
+
+	rf.persist()
 
 	rf.log(rf.me,rf.state,rf.CurrentTerm, " Leader found! ", true)
 
